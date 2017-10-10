@@ -1,0 +1,35 @@
+{
+  "maker": {
+    "address": "0x77941923a053627daa7c83a22e357757749036e1",
+    "token": {
+      "name": "Ether Token",
+      "symbol": "WETH",
+      "decimals": 18,
+      "address": "0x05d090b51c40b020eab3bfcb6a2dff130df22e9c"
+    },
+    "amount": "100000000000000000",
+    "feeAmount": "0"
+  },
+  "taker": {
+    "address": "",
+    "token": {
+      "name": "Maker DAO",
+      "symbol": "MKR",
+      "decimals": 18,
+      "address": "0x1dad4783cf3fe3085c1426157ab175a6119a04ba"
+    },
+    "amount": "1000000000000000000",
+    "feeAmount": "0"
+  },
+  "expiration": "1507917420",
+  "feeRecipient": "0x0000000000000000000000000000000000000000",
+  "salt": "974919133930221436489021986685344618524040441162485874007050023313941649196",
+  "signature": {
+    "v": 28,
+    "r": "0x7ce6c5ad0a48424fb8b18d6e063f703a9d82f3aaf17cdf60e6b2c147647e996f",
+    "s": "0x703ba4470fbca744ac4ce3b3fa8f6e8bc09e0eb64bb97c36467acfc77e07285e",
+    "hash": "0x8326f72cdb1ae8053225a0d11ff5ad8f944a25a2b2616378f61bc0ad0e0e1709"
+  },
+  "exchangeContract": "0x90fe2af704b34e0224bf2299c838e04d4dcf1364",
+  "networkId": 42
+}

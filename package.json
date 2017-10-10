@@ -1,0 +1,32 @@
+{
+  "name": "0x-relayer-api",
+  "version": "0.0.1",
+  "description": "0x relayer api",
+  "main": "index.js",
+  "author": "john johnson",
+  "license": "MIT",
+  "scripts": {
+    "start": "tsc && node dist/index",
+    "prettier": "prettier --single-quote --trailing-comma es5 --write 'src/**/*.ts'"
+  },
+  "dependencies": {
+    "0x-json-schemas": "^0.6.1",
+    "0x.js": "^0.20.0",
+    "@types/body-parser": "^1.16.5",
+    "body-parser": "^1.18.2",
+    "cors": "^2.8.4",
+    "express": "^4.16.1",
+    "helmet": "^3.8.2",
+    "morgan": "^1.9.0",
+    "tslint-config-0xproject": "^0.0.2",
+    "web3-provider-engine": "^13.3.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.1",
+    "@types/express": "^4.0.37",
+    "@types/helmet": "^0.0.36",
+    "@types/morgan": "^1.7.33",
+    "prettier": "^1.7.4",
+    "web3-typescript-typings": "^0.6.2"
+  }
+}
