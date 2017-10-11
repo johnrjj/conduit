@@ -1,11 +1,9 @@
 import { Router } from 'express';
 import * as bodyParser from 'body-parser';
-import { Repository, InMemoryRepository } from '../repositories';
+import { Repository } from '../repositories';
 import { validateEndpointSignedOrderBySchema } from '../util/validate';
 import { SignedOrderRawApiPayload } from '../types/0x-spec';
 import { parseOrder } from '../util/order';
-
-// const db: Repository = new InMemoryRepository();
 
 const createRouter = (db: Repository) => {
   const router: Router = Router();

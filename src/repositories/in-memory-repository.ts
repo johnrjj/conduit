@@ -1,6 +1,5 @@
 import * as BigNumber from 'bignumber.js';
 import { Repository } from './repository';
-import { OrderInternalModel } from '../types/models';
 import {
   TokenPair,
   OrderbookOrder,
