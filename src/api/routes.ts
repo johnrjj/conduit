@@ -3,7 +3,7 @@ import * as bodyParser from 'body-parser';
 import { Repository } from '../repositories';
 import { validateEndpointSignedOrderBySchema } from '../util/validate';
 import { SignedOrderRawApiPayload } from '../types/0x-spec';
-import { parseOrder } from '../util/order';
+import { convertApiPayloadToSignedOrder } from '../util/order';
 
 const createRouter = (db: Repository) => {
   const router: Router = Router();
@@ -20,12 +20,12 @@ const createRouter = (db: Repository) => {
     console.log(JSON.stringify(body));
 
     const order = body as SignedOrderRawApiPayload;
-    const parsedOrder = parseOrder(order);
+    const signedOrder = convertApiPayloadToSignedOrder(order);
 
     // not working correctly right now, thinks taker is not optional (but it is!!!), pr it?
     const validationInfo = validateEndpointSignedOrderBySchema(order);
 
-    await db.postOrder(parsedOrder);
+    await db.postOrder(signedOrder);
 
     res.status(201).send('OK');
   });
