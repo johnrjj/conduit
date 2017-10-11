@@ -10,8 +10,7 @@ export interface TokenInfo {
 }
 
 export interface TokenPair {
-  tokenA: TokenInfo;
-  tokenB: TokenInfo;
+  [tokenName: string]: TokenInfo;
 }
 
 export interface ECSignature {
