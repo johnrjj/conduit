@@ -33,13 +33,20 @@ export class InMemoryRepository implements Repository {
       remainingTakerTokenAmount: signedOrder.makerTokenAmount,
     };
     this.db.orderbook.push(fullOrder);
+    console.log(
+      'order added',
+      'logging all orders',
+      JSON.stringify(this.db.orderbook)
+    );
     return true;
   }
 
   async getOrders(
     options?: ApiOrderOptions | undefined
   ): Promise<OrderbookOrder[]> {
-    return this.db.orderbook.filter(x => x.state === OrderState.OPEN);
+    const orders = this.db.orderbook.filter(x => x.state === OrderState.OPEN);
+    console.log('got orders', orders);
+    return orders;
   }
 
   getTokenPairs(): Promise<TokenPair[]> {

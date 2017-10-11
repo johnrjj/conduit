@@ -56,10 +56,20 @@ export interface SignedOrderRawApiPayload {
 }
 
 export enum OrderState {
-  'OPEN',
-  'EXPIRED',
-  'CLOSED',
-  'UNFUNDED',
+  'OPEN' = 'OPEN',
+  'EXPIRED' = 'EXPIRED',
+  'CLOSED' = 'CLOSED',
+  'UNFUNDED' = 'UNFUNDED',
+}
+
+enum availableCurrencyPairs {
+  BTC_ETH = 'BTC-ETH',
+  BTC_LTC = 'BTC-LTC',
+  USDT_BTC = 'USDT-BTC',
+  USDT_ETH = 'USDT-ETH',
+  BTC_NEO = 'BTC-NEO',
+  BTC_ARK = 'BTC-ARK',
+  BTC_SYS = 'BTC-SYS',
 }
 
 export interface PendingState {
@@ -105,4 +115,18 @@ export interface ApiOrderOptions {
   trader?: string;
   feeRecipient?: string;
   limit?: number;
+}
+
+export interface LogFillArgs {
+  maker: string;
+  taker: string;
+  feeRecipient: string;
+  makerToken: string;
+  takerToken: string;
+  filledMakerTokenAmount: BigNumber;
+  filledTakerTokenAmount: BigNumber;
+  paidMakerFee: BigNumber;
+  paidTakerFee: BigNumber;
+  tokens: string;
+  orderHash: string;
 }

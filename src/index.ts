@@ -1,4 +1,4 @@
-import app from './app';
+import { server } from './app';
 const PORT = 3000;
 
 process.on('unhandledRejection', (reason, p) => {
@@ -11,7 +11,7 @@ process.on('unhandledRejection', (reason, p) => {
 });
 
 const start = () =>
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`Running on port ${PORT}`);
   });
 
