@@ -35,7 +35,7 @@ const createRouter = (db: Repository, zeroEx: ZeroEx) => {
 
     await db.postOrder(signedOrder);
 
-    res.sendStatus(201);    
+    res.sendStatus(201);
   });
   return router;
 };

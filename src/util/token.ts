@@ -10,13 +10,11 @@ const pairTokens = (arr: Array<Token>) => {
       const o = {
         [tokenA.name]: tokenA,
         [tokenB.name]: tokenB,
-      }
+      };
       accum.push(o);
     }
   }
   return accum;
 };
 
-export {
-  pairTokens,
-}
+export { pairTokens };

@@ -68,8 +68,6 @@ io.on('connection', socket => {
 
 io.emit('order', 'orderdetail');
 
-
-
 // const tokens = zeroEx.tokenRegistry
 //   .getTokensAsync()
 //   .then(x => console.log(x))
