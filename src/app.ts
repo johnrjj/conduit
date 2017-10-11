@@ -26,6 +26,7 @@ BigNumber.BigNumber.config({
 
 const app = express();
 
+// temporary
 const db: Repository = new InMemoryRepository();
 
 app.set('trust proxy', true);
@@ -54,12 +55,7 @@ app.use((error: any, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-const KOVAN_ENDPOINT = 'https://kovan.infura.io';
-const KOVAN_STARTING_BLOCK = 3117574;
-const KOVAN_0X_EXCHANGE_SOL_ADDRESS =
-  '0x90fe2af704b34e0224bf2299c838e04d4dcf1364';
-
-// socket io setup
+// socket io setup, move elsewhere
 const server = new Server(app);
 const io = openSocket(server);
 
@@ -67,7 +63,13 @@ io.on('connection', socket => {
   socket.broadcast.emit('user connected');
 });
 
-io.emit('meow', 'meeeeeowwww');
+io.emit('order', 'orderdetail');
+
+// 0x setup, move elsewhere
+const KOVAN_ENDPOINT = 'https://kovan.infura.io';
+const KOVAN_STARTING_BLOCK = 3117574;
+const KOVAN_0X_EXCHANGE_SOL_ADDRESS =
+  '0x90fe2af704b34e0224bf2299c838e04d4dcf1364';
 
 const providerEngine = new ProviderEngine();
 providerEngine.addProvider(new FilterSubprovider());
@@ -112,13 +114,11 @@ zeroEx.exchange
   )
   .catch(e => console.log('event log error', e));
 
-const recurseForever: Function = () =>
+const emitForever: Function = () =>
   setTimeout(() => {
-    console.log('meow');
-    io.emit('order', 'meow1', 'meow2');
-    recurseForever();
+    io.emit('order', 'orderdetails');
+    emitForever();
   }, 1000);
-
-recurseForever();
+emitForever();
 
 export { server, app };

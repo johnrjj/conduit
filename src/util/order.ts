@@ -1,7 +1,9 @@
 import { BigNumber } from 'bignumber.js';
 import { SignedOrderRawApiPayload, SignedOrder } from '../types/0x-spec';
 
-const convertApiPayloadToSignedOrder = (order: SignedOrderRawApiPayload): SignedOrder => {
+const convertApiPayloadToSignedOrder = (
+  order: SignedOrderRawApiPayload
+): SignedOrder => {
   const parsedOrder: SignedOrder = Object.assign({}, order, {
     makerFee: new BigNumber(order.makerFee),
     takerFee: new BigNumber(order.takerFee),
