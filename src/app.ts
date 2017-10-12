@@ -25,7 +25,7 @@ const KOVAN_0X_EXCHANGE_SOL_ADDRESS =
   '0x90fe2af704b34e0224bf2299c838e04d4dcf1364';
 
 // temporary
-const db: Repository = new InMemoryRepository();
+const repo: Repository = new InMemoryRepository();
 
 const providerEngine = new ProviderEngine();
 providerEngine.addProvider(new FilterSubprovider());
@@ -44,7 +44,7 @@ app.get('/healthcheck', (req, res) => {
   res.sendStatus(200);
 });
 
-app.use('/api/v0', v0ApiRouteFactory(db, zeroEx));
+app.use('/api/v0', v0ApiRouteFactory(repo, zeroEx));
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   const err = new Error('Not Found');
@@ -65,7 +65,6 @@ const io = openSocket(server);
 io.on('connection', socket => {
   socket.broadcast.emit('user connected');
 });
-io.emit('order', 'orderdetail');
 
 const zeroExStream = new PassThrough({
   objectMode: true,
@@ -87,7 +86,7 @@ zeroEx.exchange
     })
   )
   .catch(e => console.log('event log error', e));
-zeroExStream.pipe(db);
+zeroExStream.pipe(repo);
 
 const emitForever: Function = () =>
   setTimeout(() => {

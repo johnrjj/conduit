@@ -29,16 +29,13 @@ export class InMemoryRepository extends Duplex implements Repository {
 
   _read() {}
   _write(msg, encoding, callback) {
+    // push downstream
     this.push(msg);
-    console.log('from in mem db ', msg);
-
     switch (msg.type) {
-      case 'ticker':
-        // this.updateTicker(msg);
-        // ticker is emitted in pvs method
+      case 'order':
         break;
       default:
-        this.emit('LiveOrderbook.update', msg);
+        this.emit('Repo.Unrecgnized', msg);
         break;
     }
     callback();
