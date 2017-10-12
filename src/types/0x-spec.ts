@@ -1,4 +1,4 @@
-import { BigNumber } from 'bignumber.js';
+import * as BigNumber from 'bignumber.js';
 
 export interface TokenInfo {
   address: string;
@@ -22,18 +22,17 @@ export interface ECSignature {
 export interface Order {
   maker: string;
   taker: string;
-  makerFee: BigNumber;
-  takerFee: BigNumber;
-  makerTokenAmount: BigNumber;
-  takerTokenAmount: BigNumber;
+  makerFee: BigNumber.BigNumber;
+  takerFee: BigNumber.BigNumber;
+  makerTokenAmount: BigNumber.BigNumber;
+  takerTokenAmount: BigNumber.BigNumber;
   makerTokenAddress: string;
   takerTokenAddress: string;
-  salt: BigNumber;
+  salt: BigNumber.BigNumber;
   exchangeContractAddress: string;
   feeRecipient: string;
-  expirationUnixTimestampSec: BigNumber;
+  expirationUnixTimestampSec: BigNumber.BigNumber;
 }
-
 export interface SignedOrder extends Order {
   ecSignature: ECSignature;
 }
@@ -79,7 +78,7 @@ export interface PendingState {
 export interface OrderbookOrder {
   signedOrder: SignedOrder;
   state: OrderState;
-  remainingTakerTokenAmount: BigNumber;
+  remainingTakerTokenAmount: BigNumber.BigNumber;
   pending?: PendingState;
 }
 
@@ -88,15 +87,15 @@ export interface ApiFeePayload {
   taker?: string;
   makerTokenAddress: string;
   takerTokenAddress: string;
-  makerTokenAmount: BigNumber;
-  takerTokenAmount: BigNumber;
+  makerTokenAmount: BigNumber.BigNumber;
+  takerTokenAmount: BigNumber.BigNumber;
 }
 
 export interface ApiFeeResponse {
   feeRecipient: string;
   takerToSpecify: string;
-  makerFee: BigNumber;
-  takerFee: BigNumber;
+  makerFee: BigNumber.BigNumber;
+  takerFee: BigNumber.BigNumber;
 }
 
 export interface ApiOrderOptions {
@@ -122,10 +121,10 @@ export interface LogFillArgs {
   feeRecipient: string;
   makerToken: string;
   takerToken: string;
-  filledMakerTokenAmount: BigNumber;
-  filledTakerTokenAmount: BigNumber;
-  paidMakerFee: BigNumber;
-  paidTakerFee: BigNumber;
+  filledMakerTokenAmount: BigNumber.BigNumber;
+  filledTakerTokenAmount: BigNumber.BigNumber;
+  paidMakerFee: BigNumber.BigNumber;
+  paidTakerFee: BigNumber.BigNumber;
   tokens: string;
   orderHash: string;
 }

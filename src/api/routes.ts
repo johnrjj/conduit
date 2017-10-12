@@ -1,6 +1,6 @@
 import * as bodyParser from 'body-parser';
 import { Router } from 'express';
-import { ZeroEx, Token } from '0x.js';
+import { ZeroEx, Token, SignedOrder as ZeroExSignedOrder } from '0x.js';
 import { validateEndpointSignedOrderBySchema } from '../util/validate';
 import { pairTokens } from '../util/token';
 import { convertApiPayloadToSignedOrder } from '../util/order';
@@ -23,12 +23,21 @@ const createRouter = (db: Repository, zeroEx: ZeroEx) => {
     res.status(201).json(orders);
   });
 
-  router.post('/order', async (req, res) => {
+  router.post('/order', async (req, res, next) => {
     const { body } = req;
-    console.log(JSON.stringify(body));
-
     const order = body as SignedOrderRawApiPayload;
+    // 0x must have a weird BigNumber setup, getting type errors only on that library. Need to cast
     const signedOrder = convertApiPayloadToSignedOrder(order);
+    const zeroExSignedOrder = signedOrder as ZeroExSignedOrder;
+    try {
+      zeroEx.exchange.validateOrderFillableOrThrowAsync(zeroExSignedOrder);
+    } catch (err) {
+      const e = {
+        code: 100,
+        message: 'Order not fillable',
+      };
+      return next(e);
+    }
 
     // not working correctly right now, thinks taker is not optional (but it is!), pr it?
     const validationInfo = validateEndpointSignedOrderBySchema(order);
