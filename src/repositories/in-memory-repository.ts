@@ -1,4 +1,5 @@
 import * as BigNumber from 'bignumber.js';
+import { Duplex } from 'stream';
 import { Repository } from './repository';
 import {
   TokenPair,
@@ -14,14 +15,33 @@ export interface InMemoryDatabase {
   orderbook: Array<OrderbookOrder>;
 }
 
-export class InMemoryRepository implements Repository {
+export class InMemoryRepository extends Duplex implements Repository {
   private db: InMemoryDatabase;
 
   constructor(initialDb?: InMemoryDatabase) {
+    super({ objectMode: true, highWaterMark: 1024 });
+
     this.db = {
       ...initialDb,
       orderbook: [],
     };
+  }
+
+  _read() {}
+  _write(msg, encoding, callback) {
+    this.push(msg);
+    console.log('from in mem db ', msg);
+
+    switch (msg.type) {
+      case 'ticker':
+        // this.updateTicker(msg);
+        // ticker is emitted in pvs method
+        break;
+      default:
+        this.emit('LiveOrderbook.update', msg);
+        break;
+    }
+    callback();
   }
 
   async postOrder(signedOrder: SignedOrder): Promise<boolean> {

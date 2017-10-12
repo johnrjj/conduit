@@ -13,6 +13,7 @@ import { ZeroEx, ExchangeEvents } from '0x.js';
 import v0ApiRouteFactory from './api/routes';
 import { Repository, InMemoryRepository } from './repositories';
 import { LogFillArgs } from './types/0x-spec';
+import { Readable, PassThrough } from 'stream';
 
 BigNumber.BigNumber.config({
   EXPONENTIAL_AT: 1000,
@@ -25,6 +26,7 @@ const KOVAN_0X_EXCHANGE_SOL_ADDRESS =
 
 // temporary
 const db: Repository = new InMemoryRepository();
+
 const providerEngine = new ProviderEngine();
 providerEngine.addProvider(new FilterSubprovider());
 providerEngine.addProvider(new RpcSubprovider({ rpcUrl: KOVAN_ENDPOINT }));
@@ -58,30 +60,17 @@ app.use((error: any, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-// socket io setup, move elsewhere
 const server = new Server(app);
 const io = openSocket(server);
-
 io.on('connection', socket => {
   socket.broadcast.emit('user connected');
 });
-
 io.emit('order', 'orderdetail');
 
-// const tokens = zeroEx.tokenRegistry
-//   .getTokensAsync()
-//   .then(x => console.log(x))
-//   .catch(e => console.error('error getting token registry', e));
-
-// zeroEx
-//   .getAvailableAddressesAsync()
-//   .then(function(availableAddresses) {
-//     console.log(availableAddresses);
-//   })
-//   .catch(function(error) {
-//     console.log('error getting available addresses', error);
-//   });
-
+const zeroExStream = new PassThrough({
+  objectMode: true,
+  highWaterMark: 1024,
+});
 zeroEx.exchange
   .subscribeAsync(
     ExchangeEvents.LogFill,
@@ -93,16 +82,12 @@ zeroEx.exchange
     emitter.watch((e, ev) => {
       console.log(e, ev);
       const args = ev.args as LogFillArgs;
-      io.emit(
-        'order',
-        args.maker,
-        args.taker,
-        args.filledMakerTokenAmount,
-        args.filledTakerTokenAmount
-      );
+      zeroExStream.push(args);
+      io.emit('order-fill-from-node', JSON.stringify(args));
     })
   )
   .catch(e => console.log('event log error', e));
+zeroExStream.pipe(db);
 
 const emitForever: Function = () =>
   setTimeout(() => {

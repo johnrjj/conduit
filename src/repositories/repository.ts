@@ -1,3 +1,4 @@
+import { Duplex } from 'stream';
 import {
   TokenPair,
   OrderbookOrder,
@@ -7,7 +8,7 @@ import {
   ApiOrderOptions,
 } from '../types/0x-spec';
 
-interface Repository {
+interface Repository extends Duplex {
   getTokenPairs(): Promise<Array<TokenPair>>;
   getOrders(options?: ApiOrderOptions): Promise<Array<OrderbookOrder>>;
   getOrder(orderHash: string): Promise<OrderbookOrder>;
