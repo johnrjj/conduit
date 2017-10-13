@@ -18,6 +18,7 @@ export interface InMemoryDatabase {
   orderbook: Map<OrderHash, OrderbookOrder>;
 }
 
+// todo:refactor - most of this can go in orderbook base class
 export class InMemoryOrderbook extends Duplex implements Orderbook {
   private db: InMemoryDatabase;
   private logger: Logger;
@@ -40,15 +41,55 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     return true;
   }
 
-  private orderbookToArray() {
-    return Array.from(this.db.orderbook.values());
+  async postOrder(orderHash: OrderHash, signedOrder: SignedOrder): Promise<boolean> {
+    // missing pending field but i'm not sure what to do with that? docs are sparse
+    const fullOrder: OrderbookOrder = {
+      signedOrder,
+      state: OrderState.OPEN,
+      remainingTakerTokenAmount: signedOrder.makerTokenAmount,
+    };
+    this.db.orderbook.set(orderHash, fullOrder);
+    this.emit('Orderbook.OrderAdded', fullOrder);
+    return true;
   }
 
-  private log(level: string, message: string, meta?: any) {
-    if (!this.logger) {
-      return;
+  async getOrders(options?: ApiOrderOptions | undefined): Promise<OrderbookOrder[]> {
+    const orders = this.orderbookToArray().filter(x => x.state === OrderState.OPEN);
+    return orders;
+  }
+
+  getTokenPairs(): Promise<TokenPair[]> {
+    throw new Error('Method not implemented.');
+  }
+
+  async getOrder(orderHash: string): Promise<OrderbookOrder | undefined> {
+    return this.db.orderbook.get(orderHash);
+  }
+
+  getFees(feePayload: ApiFeePayload): Promise<ApiFeeResponse> {
+    throw new Error('Method not implemented.');
+  }
+
+  // noop
+  _read() {}
+
+  _write(msg, encoding, callback) {
+    // push downstream
+    this.push(msg);
+
+    this.log('debug', 'InMemoryRepo received a message');
+    this.log('debug', msg);
+
+    switch (msg.type) {
+      case 'Blockchain.LogFill':
+        const blockchainLog = msg as BlockchainLogEvent;
+        this.handleOrderFillMessage(blockchainLog.args as OrderFillMessage);
+        break;
+      default:
+        this.emit('Orderbook.Unrecgnized', msg);
+        break;
     }
-    this.logger.log(level, message, meta);
+    callback();
   }
 
   private handleOrderFillMessage(msg: OrderFillMessage) {
@@ -80,56 +121,23 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     };
     this.updateOrderbook(orderHash, updatedOrder);
 
-    this.emit('Repo.UpdatedOrder', updatedOrder);
+    this.emit('Orderbook.UpdatedOrder', updatedOrder);
   }
 
-  // noop
-  _read() {}
+  private orderbookToArray() {
+    return Array.from(this.db.orderbook.values());
+  }
 
-  _write(msg, encoding, callback) {
-    // push downstream
-    this.push(msg);
-
-    this.log('debug', 'InMemoryRepo received a message');
-    this.log('debug', msg);
-
-    switch (msg.type) {
-      case 'Blockchain.LogFill':
-        const blockchainLog = msg as BlockchainLogEvent;
-        this.handleOrderFillMessage(blockchainLog.args as OrderFillMessage);
-        break;
-      default:
-        this.emit('Repo.Unrecgnized', msg);
-        break;
+  private log(level: string, message: string, meta?: any) {
+    if (!this.logger) {
+      return;
     }
-    callback();
+    this.logger.log(level, message, meta);
   }
 
-  async postOrder(orderHash: OrderHash, signedOrder: SignedOrder): Promise<boolean> {
-    // missing pending field but i'm not sure what to do with that? docs are sparse
-    const fullOrder: OrderbookOrder = {
-      signedOrder,
-      state: OrderState.OPEN,
-      remainingTakerTokenAmount: signedOrder.makerTokenAmount,
-    };
-    this.db.orderbook.set(orderHash, fullOrder);
-    return true;
-  }
-
-  async getOrders(options?: ApiOrderOptions | undefined): Promise<OrderbookOrder[]> {
-    const orders = this.orderbookToArray().filter(x => x.state === OrderState.OPEN);
-    return orders;
-  }
-
-  getTokenPairs(): Promise<TokenPair[]> {
-    throw new Error('Method not implemented.');
-  }
-
-  async getOrder(orderHash: string): Promise<OrderbookOrder | undefined> {
-    return this.db.orderbook.get(orderHash);
-  }
-
-  getFees(feePayload: ApiFeePayload): Promise<ApiFeeResponse> {
-    throw new Error('Method not implemented.');
+  private emitError(message) {
+    const err = new Error(`Orderbook error: ${message}`);
+    this.log('error', err.message, { message: message });
+    this.emit('error', err);
   }
 }

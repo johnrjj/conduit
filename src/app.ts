@@ -26,7 +26,7 @@ const KOVAN_STARTING_BLOCK = 3117574;
 const KOVAN_0X_EXCHANGE_SOL_ADDRESS = '0x90fe2af704b34e0224bf2299c838e04d4dcf1364';
 
 // temporary
-const repo: Orderbook = new InMemoryOrderbook({ logger });
+const orderbook: Orderbook = new InMemoryOrderbook({ logger });
 
 const providerEngine = new ProviderEngine();
 providerEngine.addProvider(new FilterSubprovider());
@@ -46,7 +46,7 @@ app.get('/healthcheck', (req, res) => {
   res.sendStatus(200);
 });
 
-app.use('/api/v0', v0ApiRouteFactory(repo, zeroEx, logger));
+app.use('/api/v0', v0ApiRouteFactory(orderbook, zeroEx, logger));
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   const err = new RoutingError('Not Found');
@@ -85,6 +85,12 @@ zeroEx.exchange
     })
   )
   .catch(e => logger.error(e));
-zeroExStream.pipe(repo);
+
+// Feed all relevant event streams into orderbook
+zeroExStream.pipe(orderbook);
+
+// Now we can subscribe to the (standardized) orderbook stream for relevant events
+// orderbook.on('Orderbook.OrderAdded', (order) => {/*...*/});
+// orderbook.on('Orderbook.OrderUpdated', (order) => {/*...*/});
 
 export { server, app };
