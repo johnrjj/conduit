@@ -17,6 +17,7 @@ import {
 } from '0x.js';
 import v0ApiRouteFactory from './api/routes';
 import { Repository, InMemoryRepository } from './repositories';
+import { RoutingError } from './types/core';
 import { Readable, PassThrough } from 'stream';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 BigNumber.BigNumber.config({
@@ -54,17 +55,22 @@ app.get('/healthcheck', (req, res) => {
 app.use('/api/v0', v0ApiRouteFactory(repo, zeroEx, logger));
 
 app.use((req: Request, res: Response, next: NextFunction) => {
-  const err = new Error('Not Found');
-  req.statusCode = 404;
+  const err = new RoutingError('Not Found');
+  err.status = 404;
   next(err);
 });
 
-app.use((error: any, req: Request, res: Response, next: NextFunction) => {
-  res.status(error.status || 500);
-  res.json({
-    ...error,
-  });
-});
+app.use(
+  (
+    error: RoutingError | any,
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    res.status(error.status || 500);
+    res.json({ ...error });
+  }
+);
 
 const server = new Server(app);
 const io = openSocket(server);

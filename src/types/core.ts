@@ -15,5 +15,9 @@ export interface LogEvent {
   transactionIndex: number;
 }
 
+export class RoutingError extends Error {
+  status?: number;
+}
+
 export type BlockchainLogEvent = LogEvent;
 export type OrderFillMessage = LogFillContractEventArgs;
