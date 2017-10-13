@@ -23,23 +23,6 @@ const convertApiPayloadToSignedOrder = (
   return parsedOrder;
 };
 
-// const
-
-const getHash = async (zeroEx: ZeroEx, order: ZeroExSignedOrder) => {
-  try {
-    const contractAddress = await zeroEx.exchange.getContractAddressAsync();
-    await zeroEx.exchange.validateOrderFillableOrThrowAsync(order);
-    const hash = await ZeroEx.getOrderHashHex(order);
-    const isValidSig = await ZeroEx.isValidSignature(
-      hash,
-      order.ecSignature,
-      order.maker
-    );
-  } catch (e) {
-    console.log(e);
-  }
-};
-
 // private async validateFillOrderFireAndForgetAsync(orderJSON: string) {
 //   let orderJSONErrMsg = '';
 //   let parsedOrder: Order;

@@ -11,9 +11,9 @@ import {
 interface Repository extends Duplex {
   getTokenPairs(): Promise<Array<TokenPair>>;
   getOrders(options?: ApiOrderOptions): Promise<Array<OrderbookOrder>>;
-  getOrder(orderHash: string): Promise<OrderbookOrder>;
+  getOrder(orderHash: string): Promise<OrderbookOrder | undefined>;
   getFees(feePayload: ApiFeePayload): Promise<ApiFeeResponse>;
-  postOrder(signedOrder: SignedOrder): Promise<boolean>;
+  postOrder(orderHash: string, signedOrder: SignedOrder): Promise<boolean>;
 }
 
 export { Repository };

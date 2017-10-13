@@ -9,10 +9,14 @@ import * as BigNumber from 'bignumber.js';
 import * as ProviderEngine from 'web3-provider-engine';
 import * as FilterSubprovider from 'web3-provider-engine/subproviders/filters';
 import * as RpcSubprovider from 'web3-provider-engine/subproviders/rpc';
-import { ZeroEx, ExchangeEvents, Web3Provider } from '0x.js';
+import {
+  ZeroEx,
+  ExchangeEvents,
+  Web3Provider,
+  LogFillContractEventArgs,
+} from '0x.js';
 import v0ApiRouteFactory from './api/routes';
 import { Repository, InMemoryRepository } from './repositories';
-import { LogFillArgs } from './types/0x-spec';
 import { Readable, PassThrough } from 'stream';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 BigNumber.BigNumber.config({
@@ -82,10 +86,10 @@ zeroEx.exchange
   )
   .then(emitter =>
     emitter.watch((e, ev) => {
-      console.log(e, ev);
-      const args = ev.args as LogFillArgs;
-      zeroExStream.push(args);
-      io.emit('order-fill-from-node', JSON.stringify(args));
+      const args = ev.args as LogFillContractEventArgs;
+      ev.type = `Blockchain.${ev.event}`;
+      zeroExStream.push(ev);
+      io.emit('order-fill-from-node', JSON.stringify(ev));
     })
   )
   .catch(e => console.log('event log error', e));

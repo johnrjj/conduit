@@ -63,16 +63,16 @@ const createRouter = (repo: Repository, zeroEx: ZeroEx, logger: Logger) => {
     const signedOrder = convertApiPayloadToSignedOrder(order);
     const zeroExSignedOrder = signedOrder as ZeroExSignedOrder;
 
-    const hash = await ZeroEx.getOrderHashHex(zeroExSignedOrder);
-    logger.log('debug', `Order hash: ${hash}`);
+    const orderHash = await ZeroEx.getOrderHashHex(zeroExSignedOrder);
+    logger.log('debug', `Order hash: ${orderHash}`);
 
     try {
       await zeroEx.exchange.validateOrderFillableOrThrowAsync(
         zeroExSignedOrder
       );
-      logger.log('debug', `Order ${hash} fillable`);
+      logger.log('debug', `Order ${orderHash} fillable`);
     } catch (err) {
-      logger.log('debug', `Order ${hash} is not fillable`);
+      logger.log('debug', `Order ${orderHash} is not fillable`);
       const e = {
         code: 100,
         message: 'Order not fillable',
@@ -84,12 +84,12 @@ const createRouter = (repo: Repository, zeroEx: ZeroEx, logger: Logger) => {
     logger.log('debug', `Contract address: ${contractAddress}`);
 
     const isValidSig = await ZeroEx.isValidSignature(
-      hash,
+      orderHash,
       order.ecSignature,
       order.maker
     );
     if (!isValidSig) {
-      logger.log('debug', `Invalid signature for order: ${hash}`);
+      logger.log('debug', `Invalid signature for order: ${orderHash}`);
       const e = {
         code: 1005,
         message: 'Invalid signature',
@@ -97,8 +97,11 @@ const createRouter = (repo: Repository, zeroEx: ZeroEx, logger: Logger) => {
       return next(e);
     }
 
-    logger.log('info', `Order ${hash} passed validation, adding to orderbook`);
-    await repo.postOrder(signedOrder);
+    logger.log(
+      'info',
+      `Order ${orderHash} passed validation, adding to orderbook`
+    );
+    await repo.postOrder(orderHash, signedOrder);
     res.sendStatus(201);
   });
   return router;

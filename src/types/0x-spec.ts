@@ -19,6 +19,8 @@ export interface ECSignature {
   s: string;
 }
 
+export type OrderHash = string;
+
 export interface Order {
   maker: string;
   taker: string;
@@ -105,16 +107,16 @@ export interface ApiOrderOptions {
   limit?: number;
 }
 
-export interface LogFillArgs {
-  maker: string;
-  taker: string;
-  feeRecipient: string;
-  makerToken: string;
-  takerToken: string;
-  filledMakerTokenAmount: BigNumber.BigNumber;
-  filledTakerTokenAmount: BigNumber.BigNumber;
-  paidMakerFee: BigNumber.BigNumber;
-  paidTakerFee: BigNumber.BigNumber;
-  tokens: string;
-  orderHash: string;
-}
+// export interface LogFillArgs {
+//   maker: string;
+//   taker: string;
+//   feeRecipient: string;
+//   makerToken: string;
+//   takerToken: string;
+//   filledMakerTokenAmount: BigNumber.BigNumber;
+//   filledTakerTokenAmount: BigNumber.BigNumber;
+//   paidMakerFee: BigNumber.BigNumber;
+//   paidTakerFee: BigNumber.BigNumber;
+//   tokens: string;
+//   orderHash: string;
+// }
