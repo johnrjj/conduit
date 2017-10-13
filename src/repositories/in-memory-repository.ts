@@ -10,26 +10,45 @@ import {
   SignedOrder,
   ApiOrderOptions,
 } from '../types/0x-spec';
+import { Logger } from '../util/logger';
 
 export interface InMemoryDatabase {
-  orderbook: Array<OrderbookOrder>;
+  orderbook: Array<OrderbookOrder>; // old
+  orderbookMap: Map<string, OrderbookOrder>; // new
 }
 
 export class InMemoryRepository extends Duplex implements Repository {
   private db: InMemoryDatabase;
+  private logger: Logger;
 
-  constructor(initialDb?: InMemoryDatabase) {
+  constructor({
+    initialDb,
+    logger,
+  }: {
+    logger: Logger;
+    initialDb?: InMemoryDatabase;
+  }) {
     super({ objectMode: true, highWaterMark: 1024 });
-
     this.db = {
-      ...initialDb,
       orderbook: [],
+      orderbookMap: new Map(),
+      ...initialDb,
     };
   }
 
+  private log(level: string, message: string, meta?: any) {
+    if (!this.logger) {
+      return;
+    }
+    this.logger.log(level, message, meta);
+  }
+
+  // noop
   _read() {}
+
   _write(msg, encoding, callback) {
     // push downstream
+    console.log('received message', msg);
     this.push(msg);
     switch (msg.type) {
       case 'order':
@@ -49,11 +68,6 @@ export class InMemoryRepository extends Duplex implements Repository {
       remainingTakerTokenAmount: signedOrder.makerTokenAmount,
     };
     this.db.orderbook.push(fullOrder);
-    console.log(
-      'order added',
-      'logging all orders',
-      JSON.stringify(this.db.orderbook)
-    );
     return true;
   }
 

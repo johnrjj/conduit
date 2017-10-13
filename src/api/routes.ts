@@ -4,13 +4,18 @@ import { ZeroEx, Token, SignedOrder as ZeroExSignedOrder } from '0x.js';
 import { validateEndpointSignedOrderBySchema } from '../util/validate';
 import { pairTokens } from '../util/token';
 import { convertApiPayloadToSignedOrder } from '../util/order';
+import { Logger } from '../util/logger';
 import { Repository } from '../repositories';
-import { SignedOrderRawApiPayload, TokenPair } from '../types/0x-spec';
+import {
+  SignedOrderRawApiPayload,
+  TokenPair,
+  ApiOrderOptions,
+} from '../types/0x-spec';
 
-const createRouter = (db: Repository, zeroEx: ZeroEx) => {
-  const router: Router = Router();
-  router.use(bodyParser.json());
-  router.use(bodyParser.urlencoded({ extended: true }));
+const createRouter = (repo: Repository, zeroEx: ZeroEx, logger: Logger) => {
+  const router = Router();
+  router.use(bodyParser.json({ type: '*/*' }));
+  // router.use(bodyParser.urlencoded({ extended: true }));
 
   router.get('/token_pairs', async (req, res) => {
     const tokens = await zeroEx.tokenRegistry.getTokensAsync();
@@ -19,19 +24,55 @@ const createRouter = (db: Repository, zeroEx: ZeroEx) => {
   });
 
   router.get('/orders', async (req, res) => {
-    const orders = await db.getOrders();
+    const options: ApiOrderOptions = req.query;
+    const orders = await repo.getOrders(options);
     res.status(201).json(orders);
   });
 
+  router.get('order/:orderHash', async (req, res) => {
+    const { orderHash } = req.params;
+
+    // otherwise send not found...
+    res.sendStatus(404);
+  });
+
   router.post('/order', async (req, res, next) => {
+    logger.log('debug', 'Order endpoint hit, order verifying...');
     const { body } = req;
     const order = body as SignedOrderRawApiPayload;
+
+    if (!order.taker || order.taker === '') {
+      // schema requires a taker, so if it is null/emptystring we assign empty hex
+      order.taker = '0x0000000000000000000000000000000000000000';
+    }
+
+    // not working correctly right now, thinks taker is not optional (but it is!), pr it?
+    const validationInfo = validateEndpointSignedOrderBySchema(order);
+    if (!validationInfo.valid) {
+      logger.log('debug', 'Order validation failed');
+      const e = {
+        code: 101,
+        status: 400,
+        message: `Validation failed`,
+        validationErrors: validationInfo.errors,
+      };
+      return next(e);
+    }
+
     // 0x must have a weird BigNumber setup, getting type errors only on that library. Need to cast
     const signedOrder = convertApiPayloadToSignedOrder(order);
     const zeroExSignedOrder = signedOrder as ZeroExSignedOrder;
+
+    const hash = await ZeroEx.getOrderHashHex(zeroExSignedOrder);
+    logger.log('debug', `Order hash: ${hash}`);
+
     try {
-      zeroEx.exchange.validateOrderFillableOrThrowAsync(zeroExSignedOrder);
+      await zeroEx.exchange.validateOrderFillableOrThrowAsync(
+        zeroExSignedOrder
+      );
+      logger.log('debug', `Order ${hash} fillable`);
     } catch (err) {
+      logger.log('debug', `Order ${hash} is not fillable`);
       const e = {
         code: 100,
         message: 'Order not fillable',
@@ -39,11 +80,25 @@ const createRouter = (db: Repository, zeroEx: ZeroEx) => {
       return next(e);
     }
 
-    // not working correctly right now, thinks taker is not optional (but it is!), pr it?
-    const validationInfo = validateEndpointSignedOrderBySchema(order);
+    const contractAddress = await zeroEx.exchange.getContractAddressAsync();
+    logger.log('debug', `Contract address: ${contractAddress}`);
 
-    await db.postOrder(signedOrder);
+    const isValidSig = await ZeroEx.isValidSignature(
+      hash,
+      order.ecSignature,
+      order.maker
+    );
+    if (!isValidSig) {
+      logger.log('debug', `Invalid signature for order: ${hash}`);
+      const e = {
+        code: 1005,
+        message: 'Invalid signature',
+      };
+      return next(e);
+    }
 
+    logger.log('info', `Order ${hash} passed validation, adding to orderbook`);
+    await repo.postOrder(signedOrder);
     res.sendStatus(201);
   });
   return router;

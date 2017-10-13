@@ -5,8 +5,8 @@ const setupProcessCleanup = () => {
   process.on('exit', () => {
     (process as NodeJS.EventEmitter).emit('cleanup');
   });
-  process.on('SIGINT', function() {
-    console.log('ctrl-c...');
+  process.on('SIGINT', () => {
+    console.log('ctrl-c');
     process.exit(2);
   });
   process.on('uncaughtException', e => {
