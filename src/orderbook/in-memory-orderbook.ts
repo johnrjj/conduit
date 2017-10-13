@@ -1,6 +1,6 @@
 import * as BigNumber from 'bignumber.js';
 import { Duplex } from 'stream';
-import { Repository } from './repository';
+import { Orderbook } from './orderbook';
 import {
   TokenPair,
   OrderbookOrder,
@@ -18,17 +18,11 @@ export interface InMemoryDatabase {
   orderbook: Map<OrderHash, OrderbookOrder>;
 }
 
-export class InMemoryRepository extends Duplex implements Repository {
+export class InMemoryOrderbook extends Duplex implements Orderbook {
   private db: InMemoryDatabase;
   private logger: Logger;
 
-  constructor({
-    initialDb,
-    logger,
-  }: {
-    logger: Logger;
-    initialDb?: InMemoryDatabase;
-  }) {
+  constructor({ initialDb, logger }: { logger: Logger; initialDb?: InMemoryDatabase }) {
     super({ objectMode: true, highWaterMark: 1024 });
     this.logger = logger;
     this.db = {
@@ -76,8 +70,7 @@ export class InMemoryRepository extends Duplex implements Repository {
       return;
     }
 
-    const previousRemainingTakerTokenAmount =
-      existingOrder.remainingTakerTokenAmount;
+    const previousRemainingTakerTokenAmount = existingOrder.remainingTakerTokenAmount;
     const newRemainingTakerTokenAmount = previousRemainingTakerTokenAmount.sub(
       filledTakerTokenAmount as BigNumber.BigNumber
     );
@@ -112,10 +105,7 @@ export class InMemoryRepository extends Duplex implements Repository {
     callback();
   }
 
-  async postOrder(
-    orderHash: OrderHash,
-    signedOrder: SignedOrder
-  ): Promise<boolean> {
+  async postOrder(orderHash: OrderHash, signedOrder: SignedOrder): Promise<boolean> {
     // missing pending field but i'm not sure what to do with that? docs are sparse
     const fullOrder: OrderbookOrder = {
       signedOrder,
@@ -126,12 +116,8 @@ export class InMemoryRepository extends Duplex implements Repository {
     return true;
   }
 
-  async getOrders(
-    options?: ApiOrderOptions | undefined
-  ): Promise<OrderbookOrder[]> {
-    const orders = this.orderbookToArray().filter(
-      x => x.state === OrderState.OPEN
-    );
+  async getOrders(options?: ApiOrderOptions | undefined): Promise<OrderbookOrder[]> {
+    const orders = this.orderbookToArray().filter(x => x.state === OrderState.OPEN);
     return orders;
   }
 

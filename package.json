@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "start": "tsc && node dist/index",
-    "prettier": "prettier --single-quote --trailing-comma es5 --write 'src/**/*.ts'"
+    "prettier": "prettier --single-quote --print-width 100 --trailing-comma es5 --write 'src/**/*.ts'"
   },
   "dependencies": {
     "0x-json-schemas": "^0.6.1",

@@ -2,9 +2,7 @@ import { BigNumber } from 'bignumber.js';
 import { SignedOrderRawApiPayload, SignedOrder } from '../types/0x-spec';
 import { ZeroEx, SignedOrder as ZeroExSignedOrder } from '0x.js';
 
-const convertApiPayloadToSignedOrder = (
-  order: SignedOrderRawApiPayload
-): SignedOrder => {
+const convertApiPayloadToSignedOrder = (order: SignedOrderRawApiPayload): SignedOrder => {
   const parsedOrder: SignedOrder = {
     maker: order.maker,
     taker: order.taker,

@@ -8,7 +8,7 @@ import {
   ApiOrderOptions,
 } from '../types/0x-spec';
 
-interface Repository extends Duplex {
+interface Orderbook extends Duplex {
   getTokenPairs(): Promise<Array<TokenPair>>;
   getOrders(options?: ApiOrderOptions): Promise<Array<OrderbookOrder>>;
   getOrder(orderHash: string): Promise<OrderbookOrder | undefined>;
@@ -16,4 +16,4 @@ interface Repository extends Duplex {
   postOrder(orderHash: string, signedOrder: SignedOrder): Promise<boolean>;
 }
 
-export { Repository };
+export { Orderbook };

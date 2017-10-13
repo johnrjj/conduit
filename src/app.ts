@@ -9,14 +9,9 @@ import * as BigNumber from 'bignumber.js';
 import * as ProviderEngine from 'web3-provider-engine';
 import * as FilterSubprovider from 'web3-provider-engine/subproviders/filters';
 import * as RpcSubprovider from 'web3-provider-engine/subproviders/rpc';
-import {
-  ZeroEx,
-  ExchangeEvents,
-  Web3Provider,
-  LogFillContractEventArgs,
-} from '0x.js';
+import { ZeroEx, ExchangeEvents, Web3Provider, LogFillContractEventArgs } from '0x.js';
 import v0ApiRouteFactory from './api/routes';
-import { Repository, InMemoryRepository } from './repositories';
+import { Orderbook, InMemoryOrderbook } from './orderbook';
 import { RoutingError } from './types/core';
 import { Readable, PassThrough } from 'stream';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
@@ -28,11 +23,10 @@ const logger: Logger = ConsoleLoggerFactory({ level: 'debug' });
 
 const KOVAN_ENDPOINT = 'https://kovan.infura.io';
 const KOVAN_STARTING_BLOCK = 3117574;
-const KOVAN_0X_EXCHANGE_SOL_ADDRESS =
-  '0x90fe2af704b34e0224bf2299c838e04d4dcf1364';
+const KOVAN_0X_EXCHANGE_SOL_ADDRESS = '0x90fe2af704b34e0224bf2299c838e04d4dcf1364';
 
 // temporary
-const repo: Repository = new InMemoryRepository({ logger });
+const repo: Orderbook = new InMemoryOrderbook({ logger });
 
 const providerEngine = new ProviderEngine();
 providerEngine.addProvider(new FilterSubprovider());
@@ -60,17 +54,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next(err);
 });
 
-app.use(
-  (
-    error: RoutingError | any,
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    res.status(error.status || 500);
-    res.json({ ...error });
-  }
-);
+app.use((error: RoutingError | any, req: Request, res: Response, next: NextFunction) => {
+  res.status(error.status || 500);
+  res.json({ ...error });
+});
 
 const server = new Server(app);
 const io = openSocket(server);

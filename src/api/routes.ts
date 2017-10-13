@@ -5,14 +5,10 @@ import { validateEndpointSignedOrderBySchema } from '../util/validate';
 import { pairTokens } from '../util/token';
 import { convertApiPayloadToSignedOrder } from '../util/order';
 import { Logger } from '../util/logger';
-import { Repository } from '../repositories';
-import {
-  SignedOrderRawApiPayload,
-  TokenPair,
-  ApiOrderOptions,
-} from '../types/0x-spec';
+import { Orderbook } from '../orderbook';
+import { SignedOrderRawApiPayload, TokenPair, ApiOrderOptions } from '../types/0x-spec';
 
-const createRouter = (repo: Repository, zeroEx: ZeroEx, logger: Logger) => {
+const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   const router = Router();
   router.use(bodyParser.json({ type: '*/*' }));
   router.use(bodyParser.urlencoded({ extended: true }));
@@ -69,9 +65,7 @@ const createRouter = (repo: Repository, zeroEx: ZeroEx, logger: Logger) => {
     logger.log('debug', `Order hash: ${orderHash}`);
 
     try {
-      await zeroEx.exchange.validateOrderFillableOrThrowAsync(
-        zeroExSignedOrder
-      );
+      await zeroEx.exchange.validateOrderFillableOrThrowAsync(zeroExSignedOrder);
       logger.log('debug', `Order ${orderHash} fillable`);
     } catch (err) {
       logger.log('debug', `Order ${orderHash} is not fillable`);
@@ -85,11 +79,7 @@ const createRouter = (repo: Repository, zeroEx: ZeroEx, logger: Logger) => {
     const contractAddress = await zeroEx.exchange.getContractAddressAsync();
     logger.log('debug', `Contract address: ${contractAddress}`);
 
-    const isValidSig = await ZeroEx.isValidSignature(
-      orderHash,
-      order.ecSignature,
-      order.maker
-    );
+    const isValidSig = await ZeroEx.isValidSignature(orderHash, order.ecSignature, order.maker);
     if (!isValidSig) {
       logger.log('debug', `Invalid signature for order: ${orderHash}`);
       const e = {
@@ -99,10 +89,7 @@ const createRouter = (repo: Repository, zeroEx: ZeroEx, logger: Logger) => {
       return next(e);
     }
 
-    logger.log(
-      'info',
-      `Order ${orderHash} passed validation, adding to orderbook`
-    );
+    logger.log('info', `Order ${orderHash} passed validation, adding to orderbook`);
     await repo.postOrder(orderHash, signedOrder);
     res.sendStatus(201);
   });

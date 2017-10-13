@@ -15,12 +15,7 @@ const setupProcessCleanup = () => {
     process.exit(99);
   });
   process.on('unhandledRejection', (reason, p) => {
-    console.log(
-      'Possibly Unhandled Rejection at: Promise ',
-      p,
-      ' reason: ',
-      reason
-    );
+    console.log('Possibly Unhandled Rejection at: Promise ', p, ' reason: ', reason);
   });
 };
 
