@@ -15,7 +15,7 @@ import {
 const createRouter = (repo: Repository, zeroEx: ZeroEx, logger: Logger) => {
   const router = Router();
   router.use(bodyParser.json({ type: '*/*' }));
-  // router.use(bodyParser.urlencoded({ extended: true }));
+  router.use(bodyParser.urlencoded({ extended: true }));
 
   router.get('/token_pairs', async (req, res) => {
     const tokens = await zeroEx.tokenRegistry.getTokensAsync();
@@ -31,9 +31,11 @@ const createRouter = (repo: Repository, zeroEx: ZeroEx, logger: Logger) => {
 
   router.get('order/:orderHash', async (req, res) => {
     const { orderHash } = req.params;
-
-    // otherwise send not found...
-    res.sendStatus(404);
+    const order = await repo.getOrder(orderHash);
+    if (!order) {
+      return res.sendStatus(404);
+    }
+    // todo next - convert back to api spec
   });
 
   router.post('/order', async (req, res, next) => {
@@ -46,7 +48,6 @@ const createRouter = (repo: Repository, zeroEx: ZeroEx, logger: Logger) => {
       order.taker = '0x0000000000000000000000000000000000000000';
     }
 
-    // not working correctly right now, thinks taker is not optional (but it is!), pr it?
     const validationInfo = validateEndpointSignedOrderBySchema(order);
     if (!validationInfo.valid) {
       logger.log('debug', 'Order validation failed');

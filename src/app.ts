@@ -95,11 +95,4 @@ zeroEx.exchange
   .catch(e => console.log('event log error', e));
 zeroExStream.pipe(repo);
 
-const emitForever: Function = () =>
-  setTimeout(() => {
-    io.emit('order', 'orderdetails');
-    emitForever();
-  }, 1000);
-emitForever();
-
 export { server, app };
