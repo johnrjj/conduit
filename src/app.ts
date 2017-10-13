@@ -1,6 +1,6 @@
 import * as express from 'express';
 import { Request, Response, NextFunction } from 'express';
-import * as apiLogger from 'morgan';
+import * as expressLogger from 'morgan';
 import * as helmet from 'helmet';
 import * as cors from 'cors';
 import { Server } from 'http';
@@ -43,8 +43,7 @@ const zeroEx = new ZeroEx(providerEngine);
 const app = express();
 app.set('trust proxy', true);
 app.use('/', express.static(__dirname + '/public'));
-app.use(apiLogger('dev'));
-
+app.use(expressLogger('dev'));
 app.use(helmet());
 app.use(cors());
 
@@ -92,7 +91,7 @@ zeroEx.exchange
       io.emit('order-fill-from-node', JSON.stringify(ev));
     })
   )
-  .catch(e => console.log('event log error', e));
+  .catch(e => logger.error(e));
 zeroExStream.pipe(repo);
 
 export { server, app };

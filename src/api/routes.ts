@@ -44,8 +44,9 @@ const createRouter = (repo: Repository, zeroEx: ZeroEx, logger: Logger) => {
     const order = body as SignedOrderRawApiPayload;
 
     if (!order.taker || order.taker === '') {
-      // schema requires a taker, so if it is null/emptystring we assign empty hex
-      order.taker = '0x0000000000000000000000000000000000000000';
+      // schema requires a taker, so if null/emptystring we assign empty hex
+      const EMPTY_TAKER_ADDRESS = '0x0000000000000000000000000000000000000000';
+      order.taker = EMPTY_TAKER_ADDRESS;
     }
 
     const validationInfo = validateEndpointSignedOrderBySchema(order);
