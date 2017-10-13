@@ -1,6 +1,6 @@
 # 0x Relayer API in Node/Express
 
-[Work in progress, PR/Contributions welcome!]
+[Work in progress, PR/Contributions welcome! Testing on Kovan test network]
 
 ZeroEx Open Source Relayer using the [Open Orderbook](https://0xproject.com/wiki#Open-Orderbook) strategy.
 
