@@ -76,8 +76,9 @@ export class InMemoryRepository extends Duplex implements Repository {
       return;
     }
 
-    const previousTakerTokenAmount = existingOrder.remainingTakerTokenAmount;
-    const newRemainingTakerTokenAmount = previousTakerTokenAmount.sub(
+    const previousRemainingTakerTokenAmount =
+      existingOrder.remainingTakerTokenAmount;
+    const newRemainingTakerTokenAmount = previousRemainingTakerTokenAmount.sub(
       filledTakerTokenAmount as BigNumber.BigNumber
     );
     const updatedOrder: OrderbookOrder = {
