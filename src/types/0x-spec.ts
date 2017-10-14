@@ -76,22 +76,22 @@ export interface OrderbookOrder {
   pending?: PendingState;
 }
 
-export interface ApiFeePayload {
+export interface FeeApiRequest {
   exchangeContractAddress: string;
   maker: string;
   taker: string;
   makerTokenAddress: string;
   takerTokenAddress: string;
-  expirationUnixTimestampSec: BigNumber.BigNumber;
+  expirationUnixTimestampSec: string;
   salt: string;
-  makerTokenAmount?: BigNumber.BigNumber;
-  takerTokenAmount?: BigNumber.BigNumber;
+  makerTokenAmount?: string;
+  takerTokenAmount?: string;
 }
 
-export interface ApiFeeResponse {
+export interface FeeApiResponse {
   feeRecipient: string;
-  makerFee: BigNumber.BigNumber;
-  takerFee: BigNumber.BigNumber;
+  makerFee: string;
+  takerFee: string;
 }
 
 export interface ApiOrderOptions {

@@ -5,8 +5,8 @@ import {
   TokenPair,
   OrderbookOrder,
   OrderState,
-  ApiFeePayload,
-  ApiFeeResponse,
+  FeeApiRequest,
+  FeeApiResponse,
   SignedOrder,
   ApiOrderOptions,
   OrderHash,
@@ -66,7 +66,7 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     return this.db.orderbook.get(orderHash);
   }
 
-  getFees(feePayload: ApiFeePayload): Promise<ApiFeeResponse> {
+  getFees(feePayload: FeeApiRequest): Promise<FeeApiResponse> {
     throw new Error('Method not implemented.');
   }
 

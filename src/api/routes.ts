@@ -6,7 +6,13 @@ import { pairTokens } from '../util/token';
 import { convertApiPayloadToSignedOrder } from '../util/order';
 import { Logger } from '../util/logger';
 import { Orderbook } from '../orderbook';
-import { OrderApiPayload, TokenPair, ApiOrderOptions } from '../types/0x-spec';
+import {
+  OrderApiPayload,
+  TokenPair,
+  ApiOrderOptions,
+  FeeApiRequest,
+  FeeApiResponse,
+} from '../types/0x-spec';
 
 const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   const router = Router();
@@ -22,6 +28,7 @@ const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   router.get('/orders', async (req, res) => {
     const options: ApiOrderOptions = req.query;
     const orders = await repo.getOrders(options);
+    // const formattedOrders: Array<OrderApiPayload> = orders;
     res.status(201).json(orders);
   });
 
@@ -33,6 +40,20 @@ const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
     }
     // todo next - convert back to api spec
     // const payloadToSend: PostOrderApiPayload = order;
+  });
+
+  router.post('/fees', async (req, res) => {
+    const { body } = req;
+    const payload = body as FeeApiRequest;
+
+    // validate...
+
+    const response: FeeApiResponse = {
+      feeRecipient: '0x0000000000000000000000000000000000000000',
+      makerFee: '0',
+      takerFee: '0',
+    };
+    res.json(response);
   });
 
   router.post('/order', async (req, res, next) => {
