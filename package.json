@@ -7,6 +7,7 @@
   "license": "MIT",
   "scripts": {
     "start": "tsc && node dist/index",
+    "test": "jest",
     "prettier": "prettier --single-quote --print-width 100 --trailing-comma es5 --write 'src/**/*.ts'"
   },
   "dependencies": {
@@ -27,11 +28,32 @@
     "@types/cors": "^2.8.1",
     "@types/express": "^4.0.37",
     "@types/helmet": "^0.0.36",
+    "@types/jest": "^21.1.2",
     "@types/morgan": "^1.7.33",
     "@types/socket.io": "^1.4.31",
     "@types/winston": "^2.3.6",
+    "jest": "^21.2.1",
     "prettier": "^1.7.4",
+    "ts-jest": "^21.1.2",
     "tslint-config-0xproject": "^0.0.2",
+    "typescript": "^2.5.3",
     "web3-typescript-typings": "^0.6.2"
+  },
+  "jest": {
+    "transform": {
+      ".(ts|tsx)": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+    },
+    "mapCoverage": true,
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/lib/"
+    ],
+    "testRegex": "(/test/.*|\\.(test|spec))\\.(ts|tsx)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "json"
+    ]
   }
 }

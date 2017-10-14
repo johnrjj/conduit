@@ -1,5 +1,5 @@
 import { ZeroEx, Token } from '0x.js';
-import { SignedOrderRawApiPayload, TokenPair } from '../types/0x-spec';
+import { OrderApiPayload, TokenPair } from '../types/0x-spec';
 
 const pairTokens = (arr: Array<Token>) => {
   let accum: Array<TokenPair> = [];

@@ -22,37 +22,39 @@ export interface ECSignature {
 export type OrderHash = string;
 
 export interface Order {
+  exchangeContractAddress: string;
   maker: string;
   taker: string;
-  makerFee: BigNumber.BigNumber;
-  takerFee: BigNumber.BigNumber;
-  makerTokenAmount: BigNumber.BigNumber;
-  takerTokenAmount: BigNumber.BigNumber;
   makerTokenAddress: string;
   takerTokenAddress: string;
-  salt: BigNumber.BigNumber;
-  exchangeContractAddress: string;
   feeRecipient: string;
+  makerTokenAmount: BigNumber.BigNumber;
+  takerTokenAmount: BigNumber.BigNumber;
+  makerFee: BigNumber.BigNumber;
+  takerFee: BigNumber.BigNumber;
   expirationUnixTimestampSec: BigNumber.BigNumber;
+  salt: BigNumber.BigNumber;
 }
 export interface SignedOrder extends Order {
   ecSignature: ECSignature;
 }
 
-export interface SignedOrderRawApiPayload {
-  maker: string;
-  taker: string;
-  makerFee: string;
-  takerFee: string;
-  makerTokenAmount: string;
-  takerTokenAmount: string;
-  makerTokenAddress: string;
-  takerTokenAddress: string;
-  salt: string;
-  exchangeContractAddress: string;
-  feeRecipient: string;
-  expirationUnixTimestampSec: string;
-  ecSignature: ECSignature;
+export interface OrderApiPayload {
+  signedOrder: {
+    exchangeContractAddress: string;
+    maker: string;
+    taker: string;
+    makerTokenAddress: string;
+    takerTokenAddress: string;
+    feeRecipient: string;
+    makerTokenAmount: string;
+    takerTokenAmount: string;
+    makerFee: string;
+    takerFee: string;
+    expirationUnixTimestampSec: string;
+    salt: string;
+    ecSignature: ECSignature;
+  };
 }
 
 export enum OrderState {
@@ -75,17 +77,19 @@ export interface OrderbookOrder {
 }
 
 export interface ApiFeePayload {
-  maker?: string;
-  taker?: string;
+  exchangeContractAddress: string;
+  maker: string;
+  taker: string;
   makerTokenAddress: string;
   takerTokenAddress: string;
-  makerTokenAmount: BigNumber.BigNumber;
-  takerTokenAmount: BigNumber.BigNumber;
+  expirationUnixTimestampSec: BigNumber.BigNumber;
+  salt: string;
+  makerTokenAmount?: BigNumber.BigNumber;
+  takerTokenAmount?: BigNumber.BigNumber;
 }
 
 export interface ApiFeeResponse {
   feeRecipient: string;
-  takerToSpecify: string;
   makerFee: BigNumber.BigNumber;
   takerFee: BigNumber.BigNumber;
 }

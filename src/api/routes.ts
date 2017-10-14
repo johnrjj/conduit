@@ -6,7 +6,7 @@ import { pairTokens } from '../util/token';
 import { convertApiPayloadToSignedOrder } from '../util/order';
 import { Logger } from '../util/logger';
 import { Orderbook } from '../orderbook';
-import { SignedOrderRawApiPayload, TokenPair, ApiOrderOptions } from '../types/0x-spec';
+import { OrderApiPayload, TokenPair, ApiOrderOptions } from '../types/0x-spec';
 
 const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   const router = Router();
@@ -32,20 +32,22 @@ const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
       return res.sendStatus(404);
     }
     // todo next - convert back to api spec
+    // const payloadToSend: PostOrderApiPayload = order;
   });
 
   router.post('/order', async (req, res, next) => {
     logger.log('debug', 'Order endpoint hit, order verifying...');
     const { body } = req;
-    const order = body as SignedOrderRawApiPayload;
+    const payload = body as OrderApiPayload;
+    const possibleOrder = payload.signedOrder;
 
-    if (!order.taker || order.taker === '') {
+    if (!possibleOrder.taker || possibleOrder.taker === '') {
       // schema requires a taker, so if null/emptystring we assign empty hex
       const EMPTY_TAKER_ADDRESS = '0x0000000000000000000000000000000000000000';
-      order.taker = EMPTY_TAKER_ADDRESS;
+      possibleOrder.taker = EMPTY_TAKER_ADDRESS;
     }
 
-    const validationInfo = validateEndpointSignedOrderBySchema(order);
+    const validationInfo = validateEndpointSignedOrderBySchema(possibleOrder);
     if (!validationInfo.valid) {
       logger.log('debug', 'Order validation failed');
       const e = {
@@ -58,7 +60,7 @@ const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
     }
 
     // 0x must have a weird BigNumber setup, getting type errors only on that library. Need to cast
-    const signedOrder = convertApiPayloadToSignedOrder(order);
+    const signedOrder = convertApiPayloadToSignedOrder(payload);
     const zeroExSignedOrder = signedOrder as ZeroExSignedOrder;
 
     const orderHash = await ZeroEx.getOrderHashHex(zeroExSignedOrder);
@@ -79,7 +81,11 @@ const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
     const contractAddress = await zeroEx.exchange.getContractAddressAsync();
     logger.log('debug', `Contract address: ${contractAddress}`);
 
-    const isValidSig = await ZeroEx.isValidSignature(orderHash, order.ecSignature, order.maker);
+    const isValidSig = await ZeroEx.isValidSignature(
+      orderHash,
+      possibleOrder.ecSignature,
+      possibleOrder.maker
+    );
     if (!isValidSig) {
       logger.log('debug', `Invalid signature for order: ${orderHash}`);
       const e = {
