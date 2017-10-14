@@ -11,6 +11,7 @@ export interface LogEvent {
   logIndex: number | null;
   removed: boolean;
   topics: string[];
+  type: string;
   transactionHash: string;
   transactionIndex: number;
 }

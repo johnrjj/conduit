@@ -73,7 +73,7 @@ zeroEx.exchange
   .subscribeAsync(ExchangeEvents.LogFill, {}, ev => {
     const logEvent = ev as LogEvent;
     const args = ev.args as LogFillContractEventArgs;
-    ev.type = `Blockchain.${ev.event}`;
+    logEvent.type = `Blockchain.${ev.event}`;
     zeroExStream.push(ev);
     io.emit('order-fill-from-node', JSON.stringify(ev));
   })
