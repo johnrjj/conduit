@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "0x-json-schemas": "^0.6.1",
-    "0x.js": "^0.20.0",
+    "0x.js": "^0.21.4",
     "body-parser": "^1.18.2",
     "cors": "^2.8.4",
     "express": "^4.16.1",
@@ -35,6 +35,7 @@
     "jest": "^21.2.1",
     "prettier": "^1.7.4",
     "ts-jest": "^21.1.2",
+    "tslint": "^5.7.0",
     "tslint-config-0xproject": "^0.0.2",
     "typescript": "^2.5.3",
     "web3-typescript-typings": "^0.6.2"

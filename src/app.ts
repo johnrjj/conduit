@@ -69,22 +69,18 @@ const zeroExStream = new PassThrough({
   objectMode: true,
   highWaterMark: 1024,
 });
-zeroEx.exchange
-  .subscribeAsync(
-    ExchangeEvents.LogFill,
-    { fromBlock: 'latest', toBlock: 'latest' },
-    {},
-    KOVAN_0X_EXCHANGE_SOL_ADDRESS
-  )
-  .then(emitter =>
-    emitter.watch((e, ev) => {
-      const args = ev.args as LogFillContractEventArgs;
-      ev.type = `Blockchain.${ev.event}`;
-      zeroExStream.push(ev);
-      io.emit('order-fill-from-node', JSON.stringify(ev));
-    })
-  )
-  .catch(e => logger.error(e));
+zeroEx.exchange.subscribeAsync(ExchangeEvents.LogFill, {}, arg => {
+  console.log(arg);
+});
+// .then(emitter =>
+//   emitter.watch((e, ev) => {
+//     const args = ev.args as LogFillContractEventArgs;
+//     ev.type = `Blockchain.${ev.event}`;
+//     zeroExStream.push(ev);
+//     io.emit('order-fill-from-node', JSON.stringify(ev));
+//   }),
+// )
+// .catch(e => logger.error(e));
 
 // Feed all relevant event streams into orderbook
 zeroExStream.pipe(orderbook);

@@ -8,9 +8,9 @@
   dependencies:
     jsonschema "^1.2.0"
 
-"0x.js@^0.20.0":
-  version "0.20.0"
-  resolved "https://registry.yarnpkg.com/0x.js/-/0x.js-0.20.0.tgz#094ec46221d1784a3bf106203462a0353c3d48f1"
+"0x.js@^0.21.4":
+  version "0.21.4"
+  resolved "https://registry.yarnpkg.com/0x.js/-/0x.js-0.21.4.tgz#dab2fda39cc150d95d4eaba607b9f77ed15a3d47"
   dependencies:
     "0x-json-schemas" "^0.6.1"
     "@types/bignumber.js" "^4.0.2"
@@ -18,10 +18,13 @@
     compare-versions "^3.0.1"
     es6-promisify "^5.0.0"
     ethereumjs-abi "^0.6.4"
+    ethereumjs-blockstream "^2.0.6"
     ethereumjs-util "^5.1.1"
     find-versions "^2.0.0"
+    js-sha3 "^0.6.1"
     lodash "^4.17.4"
     publish-release "^1.3.3"
+    uuid "^3.1.0"
     web3 "^0.20.0"
 
 "@types/bignumber.js@^4.0.2":
@@ -327,7 +330,7 @@ aws4@^1.2.1, aws4@^1.6.0:
   version "1.6.0"
   resolved "https://registry.yarnpkg.com/aws4/-/aws4-1.6.0.tgz#83ef5ca860b2b32e4a0deedee8c771b9db57471e"
 
-babel-code-frame@^6.26.0:
+babel-code-frame@^6.22.0, babel-code-frame@^6.26.0:
   version "6.26.0"
   resolved "https://registry.yarnpkg.com/babel-code-frame/-/babel-code-frame-6.26.0.tgz#63fd43f7dc1e3bb7ce35947db8fe369a3f58c74b"
   dependencies:
@@ -1072,11 +1075,19 @@ colors@1.0.x:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/colors/-/colors-1.0.3.tgz#0433f44d809680fdeb60ed260f1b0c262e82a40b"
 
+colors@^1.1.2:
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/colors/-/colors-1.1.2.tgz#168a4701756b6a7f51a12ce0c97bfa28c084ed63"
+
 combined-stream@^1.0.5, combined-stream@~1.0.5:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/combined-stream/-/combined-stream-1.0.5.tgz#938370a57b4a51dea2c77c15d5c5fdf895164009"
   dependencies:
     delayed-stream "~1.0.0"
+
+commander@^2.9.0:
+  version "2.11.0"
+  resolved "https://registry.yarnpkg.com/commander/-/commander-2.11.0.tgz#157152fd1e7a6c8d98a5b715cf376df928004563"
 
 compare-versions@^3.0.1:
   version "3.1.0"
@@ -1524,14 +1535,7 @@ ethereum-common@^0.0.18:
   version "0.0.18"
   resolved "https://registry.yarnpkg.com/ethereum-common/-/ethereum-common-0.0.18.tgz#2fdc3576f232903358976eb39da783213ff9523f"
 
-ethereumjs-abi@^0.6.4:
-  version "0.6.4"
-  resolved "https://registry.yarnpkg.com/ethereumjs-abi/-/ethereumjs-abi-0.6.4.tgz#9ba1bb056492d00c27279f6eccd4d58275912c1a"
-  dependencies:
-    bn.js "^4.10.0"
-    ethereumjs-util "^4.3.0"
-
-"ethereumjs-abi@git+https://github.com/ethereumjs/ethereumjs-abi.git":
+ethereumjs-abi@^0.6.4, "ethereumjs-abi@git+https://github.com/ethereumjs/ethereumjs-abi.git":
   version "0.6.4"
   resolved "git+https://github.com/ethereumjs/ethereumjs-abi.git#ee6ded67235a98f3ef4ae2a338aee70a9f68fe20"
   dependencies:
@@ -1554,6 +1558,14 @@ ethereumjs-block@^1.2.2, ethereumjs-block@~1.7.0:
     ethereumjs-tx "^1.2.2"
     ethereumjs-util "^5.0.0"
     merkle-patricia-tree "^2.1.2"
+
+ethereumjs-blockstream@^2.0.6:
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/ethereumjs-blockstream/-/ethereumjs-blockstream-2.0.7.tgz#8e791d18d517f13e0ba928892dda545dc930936b"
+  dependencies:
+    immutable "3.8.1"
+    source-map-support "0.4.14"
+    uuid "3.0.1"
 
 ethereumjs-tx@^1.2.0, ethereumjs-tx@^1.2.2:
   version "1.3.3"
@@ -2251,6 +2263,10 @@ immediate@^3.2.3:
   version "3.2.3"
   resolved "https://registry.yarnpkg.com/immediate/-/immediate-3.2.3.tgz#d140fa8f614659bd6541233097ddaac25cdd991c"
 
+immutable@3.8.1:
+  version "3.8.1"
+  resolved "https://registry.yarnpkg.com/immutable/-/immutable-3.8.1.tgz#200807f11ab0f72710ea485542de088075f68cd2"
+
 imurmurhash@^0.1.4:
   version "0.1.4"
   resolved "https://registry.yarnpkg.com/imurmurhash/-/imurmurhash-0.1.4.tgz#9218b9b2b928a238b13dc4fb6b6d576f231453ea"
@@ -2750,6 +2766,10 @@ jest@^21.2.1:
 js-sha3@^0.3.1:
   version "0.3.1"
   resolved "https://registry.yarnpkg.com/js-sha3/-/js-sha3-0.3.1.tgz#86122802142f0828502a0d1dee1d95e253bb0243"
+
+js-sha3@^0.6.1:
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/js-sha3/-/js-sha3-0.6.1.tgz#5b89f77a7477679877f58c4a075240934b1f95c0"
 
 js-tokens@^3.0.0, js-tokens@^3.0.2:
   version "3.0.2"
@@ -3903,7 +3923,7 @@ resolve@1.1.7:
   version "1.1.7"
   resolved "https://registry.yarnpkg.com/resolve/-/resolve-1.1.7.tgz#203114d82ad2c5ed9e8e0411b3932875e889e97b"
 
-resolve@~1.4.0:
+resolve@^1.3.2, resolve@~1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/resolve/-/resolve-1.4.0.tgz#a75be01c53da25d934a98ebd0e4c4a7312f92a86"
   dependencies:
@@ -4151,6 +4171,12 @@ solc@^0.4.2:
     require-from-string "^1.1.0"
     semver "^5.3.0"
     yargs "^4.7.1"
+
+source-map-support@0.4.14:
+  version "0.4.14"
+  resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.4.14.tgz#9d4463772598b86271b4f523f6c1f4e02a7d6aef"
+  dependencies:
+    source-map "^0.5.6"
 
 source-map-support@^0.4.15:
   version "0.4.18"
@@ -4498,7 +4524,22 @@ tslint-react@^3.0.0:
   dependencies:
     tsutils "^2.8.0"
 
-tsutils@^2.8.0:
+tslint@^5.7.0:
+  version "5.7.0"
+  resolved "https://registry.yarnpkg.com/tslint/-/tslint-5.7.0.tgz#c25e0d0c92fa1201c2bc30e844e08e682b4f3552"
+  dependencies:
+    babel-code-frame "^6.22.0"
+    colors "^1.1.2"
+    commander "^2.9.0"
+    diff "^3.2.0"
+    glob "^7.1.1"
+    minimatch "^3.0.4"
+    resolve "^1.3.2"
+    semver "^5.3.0"
+    tslib "^1.7.1"
+    tsutils "^2.8.1"
+
+tsutils@^2.8.0, tsutils@^2.8.1:
   version "2.12.1"
   resolved "https://registry.yarnpkg.com/tsutils/-/tsutils-2.12.1.tgz#f4d95ce3391c8971e46e54c4cf0edb0a21dd5b24"
   dependencies:
@@ -4575,6 +4616,10 @@ util-deprecate@~1.0.1:
 utils-merge@1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/utils-merge/-/utils-merge-1.0.1.tgz#9f95710f50a267947b2ccc124741c1028427e713"
+
+uuid@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.0.1.tgz#6544bba2dfda8c1cf17e629a3a305e2bb1fee6c1"
 
 uuid@^3.0.0, uuid@^3.1.0:
   version "3.1.0"
