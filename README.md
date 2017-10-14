@@ -20,6 +20,56 @@ The server is hosted at `http://localhost:3000`
 To make sure it is working, make a GET request to `http://localhost:3000/api/v0/token_pairs` 
 
 
+### Architecture
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                             ┌──────────────┐                       
+                             │              │                       
+                             │    Client    │                       
+                             │              │                       
+                             └──────────────┘                       
+                                   ▲  ▲                             
+                           ┌───────┘  └───────┐                     
+                           │                  ▼                     
+                    ┌─────────────┐    ┌─────────────┐              
+                    │             │    │             │              
+                    │  WebSocket  │    │  HTTP API   │              
+                    │             │    │             │              
+                    └─────────────┘    └─────────────┘              
+                           ▲                  ▲                     
+                           │                  │                     
+                           └───────┐   ┌──────┘                     
+                                   │   │                            
+                                   │   ▼                            
+      ┌──────────────┐       ┌──────────────┐       ┌──────────────┐
+      │Event sources │       │              │       │◦◦◦◦◦◦◦◦◦◦◦◦◦◦│
+      │  (includes   │ ─────▶│  App Engine  │◀─────▶│◦◦◦◦0x.js◦◦◦◦◦│
+      │    0x.js)    │       │              │       │◦◦◦◦◦◦◦◦◦◦◦◦◦◦│
+      └──────────────┘       └──────────────┘       └──────────────┘
+                                     ▲                              
+                                     │                              
+                                     │                              
+                                     ▼                              
+                             ┌──────────────┐                       
+                             │              │                       
+                             │  Orderbook   │                       
+                             │              │                       
+                             └──────────────┘                       
+                                     ▲                              
+                                     │                              
+                                     │                              
+                                     ▼                              
+                             ┌──────────────┐                       
+                             │              │                       
+                             │  Data store  │                       
+                             │              │                       
+                             └──────────────┘                       
+
 ### Roadmap
 
 I'll be adding support for [Matching](https://0xproject.com/wiki#Matching) as soon as [this proposal](https://github.com/0xProject/ZEIPs/issues/2) is implemented. I personally think the matching strategy will lead to a better UX (atomic, no race conditions, faster relay feedback), but currently requires large upfront capital. Matching engine will use sorted sets on top of red-black trees.

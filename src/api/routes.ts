@@ -20,6 +20,10 @@ const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   router.use(bodyParser.urlencoded({ extended: true }));
 
   router.get('/token_pairs', async (req, res) => {
+    // get token a from req.query
+    // Parameters
+    // tokenA=&tokenB [string]: returns token pairs that contain tokenA and tokenB (in any order)
+    // Setting only tokenA or tokenB returns pairs filtered by that token only
     const tokens = await zeroEx.tokenRegistry.getTokensAsync();
     const pairs = pairTokens(tokens);
     res.status(201).json(pairs);

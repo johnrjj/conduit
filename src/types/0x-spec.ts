@@ -2,11 +2,12 @@ import * as BigNumber from 'bignumber.js';
 
 export interface TokenInfo {
   address: string;
-  symbol: string;
-  decimals: number;
   minAmount?: string;
   maxAmount?: string;
   precision?: number;
+  // symbol and decimal now deprecated but I find them still useful
+  symbol?: string;
+  decimals?: number;
 }
 
 export interface TokenPair {
