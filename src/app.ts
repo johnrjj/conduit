@@ -12,7 +12,7 @@ import * as RpcSubprovider from 'web3-provider-engine/subproviders/rpc';
 import { ZeroEx, ExchangeEvents, Web3Provider, LogFillContractEventArgs } from '0x.js';
 import v0ApiRouteFactory from './api/routes';
 import { Orderbook, InMemoryOrderbook } from './orderbook';
-import { RoutingError } from './types/core';
+import { RoutingError, LogEvent } from './types/core';
 import { Readable, PassThrough } from 'stream';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 BigNumber.BigNumber.config({
@@ -69,18 +69,16 @@ const zeroExStream = new PassThrough({
   objectMode: true,
   highWaterMark: 1024,
 });
-zeroEx.exchange.subscribeAsync(ExchangeEvents.LogFill, {}, arg => {
-  console.log(arg);
-});
-// .then(emitter =>
-//   emitter.watch((e, ev) => {
-//     const args = ev.args as LogFillContractEventArgs;
-//     ev.type = `Blockchain.${ev.event}`;
-//     zeroExStream.push(ev);
-//     io.emit('order-fill-from-node', JSON.stringify(ev));
-//   }),
-// )
-// .catch(e => logger.error(e));
+zeroEx.exchange
+  .subscribeAsync(ExchangeEvents.LogFill, {}, ev => {
+    const logEvent = ev as LogEvent;
+    const args = ev.args as LogFillContractEventArgs;
+    ev.type = `Blockchain.${ev.event}`;
+    zeroExStream.push(ev);
+    io.emit('order-fill-from-node', JSON.stringify(ev));
+  })
+  .then(cancelToken => {})
+  .catch(e => logger.error(e));
 
 // Feed all relevant event streams into orderbook
 zeroExStream.pipe(orderbook);
