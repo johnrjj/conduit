@@ -8,8 +8,9 @@ ZeroEx Open Source Relayer using the [Open Orderbook](https://0xproject.com/wiki
 
 Follows ZeroEx [Standard Relayer API V0 Draft](https://github.com/0xProject/standard-relayer-api) specification.
 
+## Getting started
 
-### Dev Setup
+### Local dev setup
 
 To start the local dev server: 
 
