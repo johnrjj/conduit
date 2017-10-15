@@ -17,12 +17,14 @@
     "cors": "^2.8.4",
     "express": "^4.16.1",
     "express-winston": "^2.4.0",
+    "express-ws": "^3.0.0",
     "functional-red-black-tree": "^1.0.1",
     "helmet": "^3.8.2",
     "morgan": "^1.9.0",
     "socket.io": "^2.0.3",
     "web3-provider-engine": "^13.3.2",
-    "winston": "^2.4.0"
+    "winston": "^2.4.0",
+    "ws": "^3.2.0"
   },
   "devDependencies": {
     "@types/body-parser": "^1.16.5",
@@ -33,6 +35,7 @@
     "@types/morgan": "^1.7.33",
     "@types/socket.io": "^1.4.31",
     "@types/winston": "^2.3.6",
+    "@types/ws": "^3.2.0",
     "jest": "^21.2.1",
     "prettier": "^1.7.4",
     "ts-jest": "^21.1.2",

@@ -1,4 +1,4 @@
-import { server } from './app';
+import app from './app';
 const PORT = 3000;
 
 const setupProcessCleanup = () => {
@@ -20,7 +20,7 @@ const setupProcessCleanup = () => {
 };
 
 const start = () =>
-  server.listen(PORT, () => {
+  app.listen(PORT, () => {
     console.log(`Running on port ${PORT}`);
   });
 
