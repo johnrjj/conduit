@@ -61,6 +61,7 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   router.post('/order', async (req, res, next) => {
     logger.log('debug', 'Order endpoint hit, order verifying...');
     const { body } = req;
+    console.log(body);
     const payload = body as OrderApiPayload;
     const possibleOrder = payload.signedOrder;
 
@@ -92,13 +93,6 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
     try {
       await zeroEx.exchange.validateOrderFillableOrThrowAsync(zeroExSignedOrder);
       logger.log('debug', `Order ${orderHash} fillable`);
-      const makerAmountUnavailable = await zeroEx.exchange.getUnavailableTakerAmountAsync(
-        orderHash
-      );
-      const makerAmountAvailable = zeroExSignedOrder.makerTokenAmount.sub(
-        makerAmountUnavailable as BigNumber.BigNumber
-      );
-      logger.log('debug', `Order ${orderHash} has ${makerAmountAvailable.toString()} left to fill`);
     } catch (err) {
       logger.log('debug', `Order ${orderHash} is not fillable`);
       const e = {

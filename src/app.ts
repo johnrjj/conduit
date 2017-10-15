@@ -51,7 +51,7 @@ app.get('/healthcheck', (req, res) => {
 
 app.use('/api/v0', v0ApiRouteFactory(orderbook, zeroEx, logger));
 
-const websocketFeed = new WebSocketFeed();
+const websocketFeed = new WebSocketFeed({ logger });
 (app as any).ws('/ws', websocketFeed.acceptConnection.bind(websocketFeed));
 
 app.use((req: Request, res: Response, next: NextFunction) => {

@@ -1,5 +1,7 @@
 import * as BigNumber from 'bignumber.js';
 import { Duplex } from 'stream';
+import { writeFileSync } from 'fs';
+import { ZeroEx } from '0x.js';
 import { Orderbook } from './orderbook';
 import {
   TokenPair,
@@ -21,10 +23,20 @@ export interface InMemoryDatabase {
 // todo:refactor - most of this can go in orderbook base class
 export class InMemoryOrderbook extends Duplex implements Orderbook {
   private db: InMemoryDatabase;
+  private zeroEx: ZeroEx;
   private logger: Logger;
 
-  constructor({ initialDb, logger }: { logger: Logger; initialDb?: InMemoryDatabase }) {
+  constructor({
+    zeroEx,
+    initialDb,
+    logger,
+  }: {
+    zeroEx: ZeroEx;
+    logger: Logger;
+    initialDb?: InMemoryDatabase;
+  }) {
     super({ objectMode: true, highWaterMark: 1024 });
+    this.zeroEx = zeroEx;
     this.logger = logger;
     this.db = {
       orderbook: new Map(),
@@ -37,11 +49,23 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
   }
 
   async postOrder(orderHash: OrderHash, signedOrder: SignedOrder): Promise<boolean> {
-    // missing pending field but i'm not sure what to do with that? docs are sparse
+    if (this.getOrder(orderHash)) {
+      this.log(
+        'info',
+        `Order ${orderHash} already exists in orderbook, ignoring order post request`
+      );
+      false;
+    }
+    const takerAmountRemaining = await this.getRemainingTakerAmount(orderHash, signedOrder);
+    this.logger.log(
+      'debug',
+      `New Order ${orderHash} has ${takerAmountRemaining.toString()} left to fill`
+    );
+
     const fullOrder: OrderbookOrder = {
       signedOrder,
       state: OrderState.OPEN,
-      remainingTakerTokenAmount: signedOrder.makerTokenAmount,
+      remainingTakerTokenAmount: takerAmountRemaining,
     };
     this.db.orderbook.set(orderHash, fullOrder);
     this.emit('Orderbook.OrderAdded', fullOrder);
@@ -49,6 +73,7 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
   }
 
   async getOrders(options?: ApiOrderOptions | undefined): Promise<OrderbookOrder[]> {
+    this.saveSnapshot();
     const orders = this.orderbookToArray().filter(x => x.state === OrderState.OPEN);
     return orders;
   }
@@ -87,12 +112,25 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     callback();
   }
 
+  private async getRemainingTakerAmount(
+    orderHash: string,
+    signedOrder: SignedOrder
+  ): Promise<BigNumber.BigNumber> {
+    const makerAmountUnavailable = await this.zeroEx.exchange.getUnavailableTakerAmountAsync(
+      orderHash
+    );
+    const makerAmountRemaining = signedOrder.makerTokenAmount.sub(
+      makerAmountUnavailable as BigNumber.BigNumber
+    );
+    return makerAmountRemaining;
+  }
+
   private updateOrderbook(orderHash: string, updatedOrder: OrderbookOrder): boolean {
     this.db.orderbook.set(orderHash, updatedOrder);
     return true;
   }
 
-  private handleOrderFillMessage(msg: OrderFillMessage) {
+  private async handleOrderFillMessage(msg: OrderFillMessage) {
     const { orderHash, filledMakerTokenAmount, filledTakerTokenAmount } = msg;
     this.log(
       'debug',
@@ -111,13 +149,19 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
       return;
     }
 
-    const previousRemainingTakerTokenAmount = existingOrder.remainingTakerTokenAmount;
-    const newRemainingTakerTokenAmount = previousRemainingTakerTokenAmount.sub(
-      filledTakerTokenAmount as BigNumber.BigNumber
+    this.log('info', `Updating order ${orderHash} in orderbook - got a fill event`);
+    const takerTokenAmountRemaining = await this.getRemainingTakerAmount(
+      orderHash,
+      existingOrder.signedOrder
     );
+    this.log(
+      'debug',
+      `Updated Order ${orderHash} has ${takerTokenAmountRemaining.toString()} left to fill`
+    );
+
     const updatedOrder: OrderbookOrder = {
       ...existingOrder,
-      remainingTakerTokenAmount: newRemainingTakerTokenAmount,
+      remainingTakerTokenAmount: takerTokenAmountRemaining,
     };
     this.updateOrderbook(orderHash, updatedOrder);
 
@@ -139,5 +183,11 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     const err = new Error(`Orderbook error: ${message}`);
     this.log('error', err.message, { message: message });
     this.emit('error', err);
+  }
+  private saveSnapshot() {
+    const datestamp = new Date().toISOString();
+    const location = `./orderbook-${datestamp}.json`;
+    writeFileSync(location, JSON.stringify(this.orderbookToArray()));
+    this.log('debug', `Saved snapshot to ${location}`);
   }
 }
