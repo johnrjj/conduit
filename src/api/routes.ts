@@ -36,7 +36,7 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
     res.status(201).json(apiFormattedOrders);
   });
 
-  router.get('order/:orderHash', async (req, res) => {
+  router.get('/order/:orderHash', async (req, res) => {
     const { orderHash } = req.params;
     const order = await orderbook.getOrder(orderHash);
     if (!order) {
