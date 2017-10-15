@@ -3,16 +3,8 @@ import { Duplex } from 'stream';
 import { writeFileSync } from 'fs';
 import { ZeroEx } from '0x.js';
 import { Orderbook } from './orderbook';
-import {
-  TokenPair,
-  OrderbookOrder,
-  OrderState,
-  FeeApiRequest,
-  FeeApiResponse,
-  SignedOrder,
-  ApiOrderOptions,
-  OrderHash,
-} from '../types/0x-spec';
+import { TokenPair, FeeApiRequest, FeeApiResponse, ApiOrderOptions } from '../types/relayer-spec';
+import { OrderbookOrder, OrderState, SignedOrder, OrderHash } from '../types/core';
 import { BlockchainLogEvent, OrderFillMessage } from '../types/core';
 import { Logger } from '../util/logger';
 

@@ -1,12 +1,6 @@
 import { Duplex } from 'stream';
-import {
-  TokenPair,
-  OrderbookOrder,
-  FeeApiRequest,
-  FeeApiResponse,
-  SignedOrder,
-  ApiOrderOptions,
-} from '../types/0x-spec';
+import { TokenPair, FeeApiRequest, FeeApiResponse, ApiOrderOptions } from '../types/relayer-spec';
+import { OrderbookOrder, SignedOrder } from '../types/core';
 
 interface Orderbook extends Duplex {
   getTokenPairs(): Promise<Array<TokenPair>>;

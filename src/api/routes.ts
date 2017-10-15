@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { ZeroEx, Token, SignedOrder as ZeroExSignedOrder } from '0x.js';
 import { validateEndpointSignedOrderBySchema } from '../util/validate';
 import { pairTokens } from '../util/token';
-import { convertApiPayloadToSignedOrder } from '../util/order';
+import { mapOrderApiPayloadToSignedOrder } from './adapter';
 import { Logger } from '../util/logger';
 import { Orderbook } from '../orderbook';
 import { mapOrderToApiSchema } from './adapter';
@@ -13,7 +13,7 @@ import {
   ApiOrderOptions,
   FeeApiRequest,
   FeeApiResponse,
-} from '../types/0x-spec';
+} from '../types/relayer-spec';
 
 const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   const router = Router();
@@ -84,7 +84,7 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
     }
 
     // 0x must have a weird BigNumber setup, getting type errors only on that library. Need to cast
-    const signedOrder = convertApiPayloadToSignedOrder(payload);
+    const signedOrder = mapOrderApiPayloadToSignedOrder(payload);
     const zeroExSignedOrder = signedOrder as ZeroExSignedOrder;
 
     const orderHash = await ZeroEx.getOrderHashHex(zeroExSignedOrder);

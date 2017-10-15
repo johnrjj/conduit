@@ -1,24 +1,77 @@
-import { LogFillContractEventArgs } from '0x.js';
-// import { LogEvent } from '0x.js'; not exported?!
+import * as BigNumber from 'bignumber.js';
+import {
+  LogEvent,
+  LogFillContractEventArgs,
+  LogCancelContractEventArgs,
+  LogErrorContractEventArgs,
+} from '0x.js'; // not exported?!
 
-export interface LogEvent {
-  address: string;
-  args: any;
-  blockHash: string | null;
-  blockNumber: number | null;
-  data: string;
-  event: string;
-  logIndex: number | null;
-  removed: boolean;
-  topics: string[];
-  type: string;
-  transactionHash: string;
-  transactionIndex: number;
+export enum OrderState {
+  'OPEN' = 'OPEN',
+  'EXPIRED' = 'EXPIRED',
+  'CLOSED' = 'CLOSED',
+  'UNFUNDED' = 'UNFUNDED',
+}
+
+export interface PendingState {
+  fillAmount: string;
+  pending: string;
+}
+
+export type OrderHash = string;
+
+export interface Order {
+  exchangeContractAddress: string;
+  maker: string;
+  taker: string;
+  makerTokenAddress: string;
+  takerTokenAddress: string;
+  feeRecipient: string;
+  makerTokenAmount: BigNumber.BigNumber;
+  takerTokenAmount: BigNumber.BigNumber;
+  makerFee: BigNumber.BigNumber;
+  takerFee: BigNumber.BigNumber;
+  expirationUnixTimestampSec: BigNumber.BigNumber;
+  salt: BigNumber.BigNumber;
+}
+
+export interface ECSignature {
+  v: number;
+  r: string;
+  s: string;
+}
+
+export interface SignedOrder extends Order {
+  ecSignature: ECSignature;
+}
+
+export interface OrderbookOrder {
+  signedOrder: SignedOrder;
+  state: OrderState;
+  remainingTakerTokenAmount: BigNumber.BigNumber;
+  pending?: PendingState;
 }
 
 export class RoutingError extends Error {
   status?: number;
 }
 
-export type BlockchainLogEvent = LogEvent;
+export type BlockchainLogEvent = LogEvent<
+  LogFillContractEventArgs | LogCancelContractEventArgs | LogErrorContractEventArgs
+>;
 export type OrderFillMessage = LogFillContractEventArgs;
+
+// export interface LogEvent {
+//   address: string;
+//   args: any;
+//   blockHash: string | null;
+//   blockNumber: number | null;
+//   data: string;
+//   event: string;
+//   logIndex: number | null;
+//   removed: boolean;
+//   topics: string[];
+//   type: string;
+//   transactionHash: string;
+//   transactionIndex: number;
+// }

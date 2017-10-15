@@ -5,12 +5,12 @@ import { Logger } from './util/logger';
 export class WebSocketFeed {
   private websockets: Set<WebSocket>;
   private logger?: Logger;
-  private wss: WebSocket.Server;
+  private wsServerRef: WebSocket.Server;
 
   constructor({ logger, wss }: { logger?: Logger; wss: WebSocket.Server }) {
     this.websockets = new Set();
     this.logger = logger;
-    this.wss = wss;
+    this.wsServerRef = wss;
   }
 
   public acceptConnection(ws: WebSocket, req: Request, next: NextFunction): void {

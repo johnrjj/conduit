@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { ZeroEx, SignedOrder as ZeroExSignedOrder } from '0x.js';
-import { OrderbookOrder } from '../types/0x-spec';
+import { OrderbookOrder } from '../types/core';
 import { InMemoryDatabase } from '../orderbook/in-memory-orderbook';
 
 const generateInMemoryDbFromJson = (zeroEx: ZeroEx): InMemoryDatabase => {
