@@ -13,8 +13,8 @@ jobs:
             npm --version
             yarn --version
       - run:
-          name: yarn-install-deps
+          name: "Install dependencies"
           command: yarn install
       - run:
-          name: test
+          name: "Run tests"
           command: yarn test

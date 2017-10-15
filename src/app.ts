@@ -4,7 +4,7 @@ import * as expressLogger from 'morgan';
 import * as helmet from 'helmet';
 import * as cors from 'cors';
 import * as WebSocket from 'ws';
-import * as expressWs from 'express-ws';
+import * as expressWsFactory from 'express-ws';
 import * as BigNumber from 'bignumber.js';
 import * as ProviderEngine from 'web3-provider-engine';
 import * as FilterSubprovider from 'web3-provider-engine/subproviders/filters';
@@ -40,7 +40,7 @@ const initialDb = generateInMemoryDbFromJson(zeroEx);
 const orderbook: Orderbook = new InMemoryOrderbook({ zeroEx, logger, initialDb });
 
 const app = express();
-expressWs(app);
+const expressWs = expressWsFactory(app);
 app.set('trust proxy', true);
 app.use('/', express.static(__dirname + '/public'));
 app.use(expressLogger('dev'));
@@ -53,8 +53,9 @@ app.get('/healthcheck', (req, res) => {
 
 app.use('/api/v0', v0ApiRouteFactory(orderbook, zeroEx, logger));
 
-const websocketFeed = new WebSocketFeed({ logger });
-(app as any).ws('/ws', websocketFeed.acceptConnection.bind(websocketFeed));
+const wss = expressWs.getWss('/ws');
+const websocketFeed = new WebSocketFeed({ logger, wss });
+(app as any).ws('/ws', (ws, req, next) => websocketFeed.acceptConnection(ws, req, next));
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   const err = new RoutingError('Not Found');
