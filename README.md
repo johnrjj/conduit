@@ -22,47 +22,47 @@ To make sure it is working, make a GET request to `http://localhost:3000/api/v0/
 
 ### Architecture
                                                                     
-                                                                    
-                             ┌──────────────┐                       
-                             │              │                       
-                             │    Client    │                       
-                             │              │                       
-                             └──────────────┘                       
-                                   ▲  ▲                             
-                           ┌───────┘  └───────┐                     
-                           │                  ▼                     
-                    ┌─────────────┐    ┌─────────────┐              
-                    │             │    │             │              
-                    │  WebSocket  │    │  HTTP API   │              
-                    │             │    │             │              
-                    └─────────────┘    └─────────────┘              
-                           ▲                  ▲                     
-                           │ emits            │                     
-                           └─events┐   ┌──────┘                     
-                                   │   │                            
-                                   │   ▼                            
-   ┌─────────────────┐       ┌──────────────┐       ┌──────────────┐
-   │ Relevant event  │       │              │       │◦◦◦◦◦◦◦◦◦◦◦◦◦◦│
-   │     streams     │ ─────▶│  App Engine  │◀─────▶│◦◦◦◦0x.js◦◦◦◦◦│
-   │(includes 0x.js) │       │              │       │◦◦◦◦◦◦◦◦◦◦◦◦◦◦│
-   └─────────────────┘       └──────────────┘       └──────────────┘
-                                     ▲                              
-                                     │                              
-                                     ▼                              
-                             ┌──────────────┐                       
-                             │              │                       
-                             │  Orderbook   │                       
-                             │              │                       
-                             └──────────────┘                       
-                                     ▲                              
-                                     │                              
-                                     ▼                              
-                             ┌──────────────┐                       
-                             │              │                       
-                             │  Data store  │                       
-                             │              │                       
-                             └──────────────┘                       
-
+	                                                                     
+	                                                                     
+	                              ┌──────────────┐                       
+	                              │              │                       
+	                              │    Client    │                       
+	                              │              │                       
+	                              └──────────────┘                       
+	                                    ▲  ▲                             
+	                            ┌───────┘  └───────┐                     
+	                            │                  ▼                     
+	                     ┌─────────────┐    ┌─────────────┐              
+	                     │             │    │             │              
+	                     │  WebSocket  │    │  HTTP API   │              
+	                     │             │    │             │              
+	                     └─────────────┘    └─────────────┘              
+	                            ▲                  ▲                     
+	                            │ emits            │                     
+	                            └─events┐   ┌──────┘                     
+	                                    │   │                            
+	                                    │   ▼                            
+	    ┌──────────────────┐      ┌──────────────┐       ┌──────────────┐
+	    │  Relevant event  │      │              │       │◦◦◦◦◦◦◦◦◦◦◦◦◦◦│
+	    │     streams      │─────▶│  App Engine  │◀─────▶│◦◦◦◦0x.js◦◦◦◦◦│
+	    │ (includes 0x.js) │      │              │       │◦◦◦◦◦◦◦◦◦◦◦◦◦◦│
+	    └──────────────────┘      └──────────────┘       └──────────────┘
+	                                      ▲                              
+	                                      │                              
+	                                      ▼                              
+	                              ┌──────────────┐                       
+	                              │              │                       
+	                              │  Orderbook   │                       
+	                              │              │                       
+	                              └──────────────┘                       
+	                                      ▲                              
+	                                      │                              
+	                                      ▼                              
+	                              ┌──────────────┐                       
+	                              │              │                       
+	                              │  Data store  │                       
+	                              │              │                       
+	                              └──────────────┘                       
 ### Roadmap
 
 I'll be adding support for [Matching](https://0xproject.com/wiki#Matching) as soon as [this proposal](https://github.com/0xProject/ZEIPs/issues/2) is implemented. I personally think the matching strategy will lead to a better UX (atomic, no race conditions, faster relay feedback), but currently requires large upfront capital. Matching engine will use sorted sets on top of red-black trees and will be configured as a separate strategy.
