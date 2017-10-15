@@ -1,5 +1,7 @@
 #  Conduit - 0x Relayer API
 
+[![CircleCI](https://circleci.com/gh/johnrjj/conduit.svg?style=svg)](https://circleci.com/gh/johnrjj/conduit/)
+
 ## Overview
 
 [Work in progress, PR/Contributions welcome! Testing on Kovan test network]
