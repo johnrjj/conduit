@@ -4,6 +4,7 @@ import * as expressLogger from 'morgan';
 import * as helmet from 'helmet';
 import * as cors from 'cors';
 import * as WebSocket from 'ws';
+import * as expressWs from 'express-ws';
 import * as BigNumber from 'bignumber.js';
 import * as ProviderEngine from 'web3-provider-engine';
 import * as FilterSubprovider from 'web3-provider-engine/subproviders/filters';
@@ -15,7 +16,7 @@ import { Orderbook, InMemoryOrderbook } from './orderbook';
 import { RoutingError, LogEvent } from './types/core';
 import { Readable, PassThrough } from 'stream';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
-import expressWs = require('express-ws');
+import { generateInMemoryDbFromJson } from './util/seed-data';
 
 BigNumber.BigNumber.config({
   EXPONENTIAL_AT: 1000,
@@ -35,7 +36,8 @@ providerEngine.start();
 const zeroEx = new ZeroEx(providerEngine);
 
 // temporary
-const orderbook: Orderbook = new InMemoryOrderbook({ zeroEx, logger });
+const initialDb = generateInMemoryDbFromJson(zeroEx);
+const orderbook: Orderbook = new InMemoryOrderbook({ zeroEx, logger, initialDb });
 
 const app = express();
 expressWs(app);
@@ -65,7 +67,7 @@ app.use((error: RoutingError | any, req: Request, res: Response, next: NextFunct
   res.json({ ...error });
 });
 
-const zeroExStream = new PassThrough({
+const zeroExStreamWrapper = new PassThrough({
   objectMode: true,
   highWaterMark: 1024,
 });
@@ -74,13 +76,13 @@ zeroEx.exchange
     const logEvent = ev as LogEvent;
     const args = ev.args as LogFillContractEventArgs;
     logEvent.type = `Blockchain.${ev.event}`;
-    zeroExStream.push(ev);
+    zeroExStreamWrapper.push(ev);
   })
   .then(cancelToken => {})
   .catch(e => logger.error(e));
 
 // Feed all relevant event streams into orderbook
-zeroExStream.pipe(orderbook);
+zeroExStreamWrapper.pipe(orderbook);
 
 // Now we can subscribe to the (standardized) orderbook stream for relevant events
 // orderbook.on('Orderbook.OrderAdded', (order) => {/*...*/});

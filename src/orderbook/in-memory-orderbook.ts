@@ -28,8 +28,8 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
 
   constructor({
     zeroEx,
-    initialDb,
     logger,
+    initialDb,
   }: {
     zeroEx: ZeroEx;
     logger: Logger;
@@ -38,10 +38,14 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     super({ objectMode: true, highWaterMark: 1024 });
     this.zeroEx = zeroEx;
     this.logger = logger;
-    this.db = {
-      orderbook: new Map(),
-      ...initialDb,
-    };
+
+    if (initialDb) {
+      this.log(
+        'debug',
+        `Seed data given, seeding in-memory db with ${initialDb.orderbook.size} order(s)`
+      );
+    }
+    this.db = { orderbook: new Map(), ...initialDb };
   }
 
   getOrderbook(): Map<string, OrderbookOrder> {
