@@ -6,6 +6,7 @@ import { pairTokens } from '../util/token';
 import { convertApiPayloadToSignedOrder } from '../util/order';
 import { Logger } from '../util/logger';
 import { Orderbook } from '../orderbook';
+import { mapOrderToApiSchema } from './adapter';
 import {
   OrderApiPayload,
   TokenPair,
@@ -14,13 +15,12 @@ import {
   FeeApiResponse,
 } from '../types/0x-spec';
 
-const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
+const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   const router = Router();
   router.use(bodyParser.json({ type: '*/*' }));
   router.use(bodyParser.urlencoded({ extended: true }));
 
   router.get('/token_pairs', async (req, res) => {
-    // get token a from req.query
     // Parameters
     // tokenA=&tokenB [string]: returns token pairs that contain tokenA and tokenB (in any order)
     // Setting only tokenA or tokenB returns pairs filtered by that token only
@@ -31,27 +31,25 @@ const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
 
   router.get('/orders', async (req, res) => {
     const options: ApiOrderOptions = req.query;
-    const orders = await repo.getOrders(options);
-    // const formattedOrders: Array<OrderApiPayload> = orders;
-    res.status(201).json(orders);
+    const orders = await orderbook.getOrders(options);
+    const apiFormattedOrders = orders.map(mapOrderToApiSchema);
+    res.status(201).json(apiFormattedOrders);
   });
 
   router.get('order/:orderHash', async (req, res) => {
     const { orderHash } = req.params;
-    const order = await repo.getOrder(orderHash);
+    const order = await orderbook.getOrder(orderHash);
     if (!order) {
       return res.sendStatus(404);
     }
-    // todo next - convert back to api spec
-    // const payloadToSend: PostOrderApiPayload = order;
+    const apiFormattedOrder = mapOrderToApiSchema(order);
+    res.json(apiFormattedOrder);
   });
 
   router.post('/fees', async (req, res) => {
     const { body } = req;
     const payload = body as FeeApiRequest;
-
-    // validate...
-
+    // right now, no fees all day every day
     const response: FeeApiResponse = {
       feeRecipient: '0x0000000000000000000000000000000000000000',
       makerFee: '0',
@@ -94,6 +92,13 @@ const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
     try {
       await zeroEx.exchange.validateOrderFillableOrThrowAsync(zeroExSignedOrder);
       logger.log('debug', `Order ${orderHash} fillable`);
+      const makerAmountUnavailable = await zeroEx.exchange.getUnavailableTakerAmountAsync(
+        orderHash
+      );
+      const makerAmountAvailable = zeroExSignedOrder.makerTokenAmount.sub(
+        makerAmountUnavailable as BigNumber.BigNumber
+      );
+      logger.log('debug', `Order ${orderHash} has ${makerAmountAvailable.toString()} left to fill`);
     } catch (err) {
       logger.log('debug', `Order ${orderHash} is not fillable`);
       const e = {
@@ -102,9 +107,6 @@ const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
       };
       return next(e);
     }
-
-    const contractAddress = await zeroEx.exchange.getContractAddressAsync();
-    logger.log('debug', `Contract address: ${contractAddress}`);
 
     const isValidSig = await ZeroEx.isValidSignature(
       orderHash,
@@ -121,7 +123,7 @@ const createRouter = (repo: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
     }
 
     logger.log('info', `Order ${orderHash} passed validation, adding to orderbook`);
-    await repo.postOrder(orderHash, signedOrder);
+    const didAddOrder = await orderbook.postOrder(orderHash, signedOrder);
     res.sendStatus(201);
   });
   return router;

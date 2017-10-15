@@ -111,17 +111,3 @@ export interface ApiOrderOptions {
   feeRecipient?: string;
   limit?: number;
 }
-
-// export interface LogFillArgs {
-//   maker: string;
-//   taker: string;
-//   feeRecipient: string;
-//   makerToken: string;
-//   takerToken: string;
-//   filledMakerTokenAmount: BigNumber.BigNumber;
-//   filledTakerTokenAmount: BigNumber.BigNumber;
-//   paidMakerFee: BigNumber.BigNumber;
-//   paidTakerFee: BigNumber.BigNumber;
-//   tokens: string;
-//   orderHash: string;
-// }

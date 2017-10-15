@@ -36,11 +36,6 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     return this.db.orderbook;
   }
 
-  updateOrderbook(orderHash: string, updatedOrder: OrderbookOrder): boolean {
-    this.db.orderbook.set(orderHash, updatedOrder);
-    return true;
-  }
-
   async postOrder(orderHash: OrderHash, signedOrder: SignedOrder): Promise<boolean> {
     // missing pending field but i'm not sure what to do with that? docs are sparse
     const fullOrder: OrderbookOrder = {
@@ -90,6 +85,11 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
         break;
     }
     callback();
+  }
+
+  private updateOrderbook(orderHash: string, updatedOrder: OrderbookOrder): boolean {
+    this.db.orderbook.set(orderHash, updatedOrder);
+    return true;
   }
 
   private handleOrderFillMessage(msg: OrderFillMessage) {
