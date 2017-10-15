@@ -1,7 +1,7 @@
 import { OrderbookOrder, OrderApiPayload } from '../types/0x-spec';
 
 const mapOrderToApiSchema = (o: OrderbookOrder): OrderApiPayload => {
-  const { signedOrder}  = o;
+  const { signedOrder } = o;
   const mapped = {
     signedOrder: {
       exchangeContractAddress: signedOrder.exchangeContractAddress,
@@ -22,6 +22,4 @@ const mapOrderToApiSchema = (o: OrderbookOrder): OrderApiPayload => {
   return mapped;
 };
 
-export { 
-  mapOrderToApiSchema,
-}
+export { mapOrderToApiSchema };
