@@ -27,7 +27,6 @@ const KOVAN_ENDPOINT = 'https://kovan.infura.io';
 const KOVAN_STARTING_BLOCK = 3117574;
 const KOVAN_0X_EXCHANGE_SOL_ADDRESS = '0x90fe2af704b34e0224bf2299c838e04d4dcf1364';
 
-
 const providerEngine = new ProviderEngine();
 providerEngine.addProvider(new FilterSubprovider());
 providerEngine.addProvider(new RpcSubprovider({ rpcUrl: KOVAN_ENDPOINT }));

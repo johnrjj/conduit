@@ -71,3 +71,40 @@
 // 	"exchangeContract": "0x90fe2af704b34e0224bf2299c838e04d4dcf1364",
 // 	"networkId": 42
 // }
+
+
+// {
+// 	"maker": {
+// 		"address": "0x2db47c8f40b00b65f11b36615e0c9073adf20350",
+// 		"token": {
+// 			"name": "Ether Token",
+// 			"symbol": "WETH",
+// 			"decimals": 18,
+// 			"address": "0x05d090b51c40b020eab3bfcb6a2dff130df22e9c"
+// 		},
+// 		"amount": "50000000000000000",
+// 		"feeAmount": "0"
+// 	},
+// 	"taker": {
+// 		"address": "",
+// 		"token": {
+// 			"name": "Maker DAO",
+// 			"symbol": "MKR",
+// 			"decimals": 18,
+// 			"address": "0x1dad4783cf3fe3085c1426157ab175a6119a04ba"
+// 		},
+// 		"amount": "500000000000000000",
+// 		"feeAmount": "0"
+// 	},
+// 	"expiration": "1512082500",
+// 	"feeRecipient": "0x0000000000000000000000000000000000000000",
+// 	"salt": "84138674028464104802330274861342601256851813867653933244984842755799141339799",
+// 	"signature": {
+// 		"v": 28,
+// 		"r": "0x8cdcc16ccf436dd26fdf470db1196f09540311d7afceed1eb041995a1a07a786",
+// 		"s": "0x71ae64a99cc274571351714052bd3f010c2518ab4ec47c13fae4a1cc371b2101",
+// 		"hash": "0x3a001b8edf9df144ccc4ae81614b45fb587c152c0a1c956463f1d391bee59bc1"
+// 	},
+// 	"exchangeContract": "0x90fe2af704b34e0224bf2299c838e04d4dcf1364",
+// 	"networkId": 42
+// }

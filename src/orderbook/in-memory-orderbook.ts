@@ -56,16 +56,18 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
       );
       false;
     }
-    const takerAmountRemaining = await this.getRemainingTakerAmount(orderHash, signedOrder);
+    const remainingTakerTokenAmount = await this.getRemainingTakerAmount(orderHash, signedOrder);
     this.logger.log(
       'debug',
-      `New Order ${orderHash} has ${takerAmountRemaining.toString()} left to fill`
+      `New Order ${orderHash} has ${remainingTakerTokenAmount.toString()} left to fill`
     );
+
+    const state = remainingTakerTokenAmount.greaterThan(0) ? OrderState.OPEN : OrderState.CLOSED;
 
     const fullOrder: OrderbookOrder = {
       signedOrder,
-      state: OrderState.OPEN,
-      remainingTakerTokenAmount: takerAmountRemaining,
+      state,
+      remainingTakerTokenAmount,
     };
     this.db.orderbook.set(orderHash, fullOrder);
     this.emit('Orderbook.OrderAdded', fullOrder);
@@ -150,18 +152,21 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     }
 
     this.log('info', `Updating order ${orderHash} in orderbook - got a fill event`);
-    const takerTokenAmountRemaining = await this.getRemainingTakerAmount(
+    const remainingTakerTokenAmount = await this.getRemainingTakerAmount(
       orderHash,
       existingOrder.signedOrder
     );
     this.log(
       'debug',
-      `Updated Order ${orderHash} has ${takerTokenAmountRemaining.toString()} left to fill`
+      `Updated Order ${orderHash} has ${remainingTakerTokenAmount.toString()} left to fill`
     );
+
+    const state = remainingTakerTokenAmount.greaterThan(0) ? OrderState.OPEN : OrderState.CLOSED;
 
     const updatedOrder: OrderbookOrder = {
       ...existingOrder,
-      remainingTakerTokenAmount: takerTokenAmountRemaining,
+      remainingTakerTokenAmount,
+      state,
     };
     this.updateOrderbook(orderHash, updatedOrder);
 
