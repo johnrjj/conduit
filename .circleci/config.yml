@@ -11,6 +11,7 @@ jobs:
           command: |
             node --version
             npm --version
+            yarn --version
       - run:
           name: yarn-install-deps
           command: yarn install
