@@ -3,7 +3,7 @@ import { ZeroEx, SignedOrder as ZeroExSignedOrder } from '0x.js';
 import { OrderbookOrder, SignedOrder } from '../types/core';
 import { OrderApiPayload } from '../types/relayer-spec';
 
-const mapOrderToApiSchema = (o: OrderbookOrder): OrderApiPayload => {
+const mapSignedOrderToOrderApiPayload = (o: OrderbookOrder): OrderApiPayload => {
   const { signedOrder } = o;
   const mapped = {
     signedOrder: {
@@ -45,4 +45,4 @@ const mapOrderApiPayloadToSignedOrder = (payload: OrderApiPayload): SignedOrder 
   return parsedOrder;
 };
 
-export { mapOrderToApiSchema, mapOrderApiPayloadToSignedOrder };
+export { mapSignedOrderToOrderApiPayload, mapOrderApiPayloadToSignedOrder };

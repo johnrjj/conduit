@@ -4,8 +4,8 @@ import { Logger } from './util/logger';
 
 export class WebSocketFeed {
   private websockets: Set<WebSocket>;
-  private logger?: Logger;
   private wsServerRef: WebSocket.Server;
+  private logger?: Logger;
 
   constructor({ logger, wss }: { logger?: Logger; wss: WebSocket.Server }) {
     this.websockets = new Set();

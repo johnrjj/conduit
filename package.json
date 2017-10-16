@@ -22,6 +22,7 @@
     "functional-red-black-tree": "^1.0.1",
     "helmet": "^3.8.2",
     "morgan": "^1.9.0",
+    "sqlite3": "^3.1.13",
     "web3-provider-engine": "^13.3.2",
     "winston": "^2.4.0",
     "ws": "^3.2.0"
@@ -35,6 +36,7 @@
     "@types/jest": "^21.1.2",
     "@types/morgan": "^1.7.33",
     "@types/socket.io": "^1.4.31",
+    "@types/sqlite3": "^3.1.1",
     "@types/winston": "^2.3.6",
     "@types/ws": "^3.2.0",
     "jest": "^21.2.1",
@@ -45,7 +47,9 @@
     "typescript": "^2.5.3",
     "web3-typescript-typings": "^0.6.2"
   },
-  "engines" : { "node" : ">=8.0.0" },
+  "engines": {
+    "node": ">=8.0.0"
+  },
   "jest": {
     "transform": {
       ".(ts|tsx)": "<rootDir>/node_modules/ts-jest/preprocessor.js"

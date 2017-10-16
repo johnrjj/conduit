@@ -4,7 +4,7 @@ import {
   LogFillContractEventArgs,
   LogCancelContractEventArgs,
   LogErrorContractEventArgs,
-} from '0x.js'; // not exported?!
+} from '0x.js';
 
 export enum OrderState {
   'OPEN' = 'OPEN',
@@ -60,18 +60,3 @@ export type BlockchainLogEvent = LogEvent<
   LogFillContractEventArgs | LogCancelContractEventArgs | LogErrorContractEventArgs
 >;
 export type OrderFillMessage = LogFillContractEventArgs;
-
-// export interface LogEvent {
-//   address: string;
-//   args: any;
-//   blockHash: string | null;
-//   blockNumber: number | null;
-//   data: string;
-//   event: string;
-//   logIndex: number | null;
-//   removed: boolean;
-//   topics: string[];
-//   type: string;
-//   transactionHash: string;
-//   transactionIndex: number;
-// }

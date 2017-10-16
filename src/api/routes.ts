@@ -6,7 +6,7 @@ import { pairTokens } from '../util/token';
 import { mapOrderApiPayloadToSignedOrder } from './adapter';
 import { Logger } from '../util/logger';
 import { Orderbook } from '../orderbook';
-import { mapOrderToApiSchema } from './adapter';
+import { mapSignedOrderToOrderApiPayload } from './adapter';
 import {
   OrderApiPayload,
   TokenPair,
@@ -21,9 +21,6 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   router.use(bodyParser.urlencoded({ extended: true }));
 
   router.get('/token_pairs', async (req, res) => {
-    // Parameters
-    // tokenA=&tokenB [string]: returns token pairs that contain tokenA and tokenB (in any order)
-    // Setting only tokenA or tokenB returns pairs filtered by that token only
     const tokens = await zeroEx.tokenRegistry.getTokensAsync();
     const pairs = pairTokens(tokens);
     res.status(201).json(pairs);
@@ -32,7 +29,7 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   router.get('/orders', async (req, res) => {
     const options: ApiOrderOptions = req.query;
     const orders = await orderbook.getOrders(options);
-    const apiFormattedOrders = orders.map(mapOrderToApiSchema);
+    const apiFormattedOrders = orders.map(mapSignedOrderToOrderApiPayload);
     res.status(201).json(apiFormattedOrders);
   });
 
@@ -42,14 +39,14 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
     if (!order) {
       return res.sendStatus(404);
     }
-    const apiFormattedOrder = mapOrderToApiSchema(order);
+    const apiFormattedOrder = mapSignedOrderToOrderApiPayload(order);
     res.json(apiFormattedOrder);
   });
 
   router.post('/fees', async (req, res) => {
     const { body } = req;
     const payload = body as FeeApiRequest;
-    // right now, no fees all day every day
+    // right now, no fees
     const response: FeeApiResponse = {
       feeRecipient: '0x0000000000000000000000000000000000000000',
       makerFee: '0',
@@ -61,7 +58,6 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   router.post('/order', async (req, res, next) => {
     logger.log('debug', 'Order endpoint hit, order verifying...');
     const { body } = req;
-    console.log(body);
     const payload = body as OrderApiPayload;
     const possibleOrder = payload.signedOrder;
 

@@ -30,7 +30,6 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     super({ objectMode: true, highWaterMark: 1024 });
     this.zeroEx = zeroEx;
     this.logger = logger;
-
     if (initialDb) {
       this.log(
         'debug',

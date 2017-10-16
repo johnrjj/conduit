@@ -1,5 +1,5 @@
-import { ZeroEx, Token } from '0x.js';
-import { OrderApiPayload, TokenPair } from '../types/relayer-spec';
+import { Token } from '0x.js';
+import { TokenPair } from '../types/relayer-spec';
 
 const pairTokens = (arr: Array<Token>) => {
   let accum: Array<TokenPair> = [];
