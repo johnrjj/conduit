@@ -57,7 +57,6 @@ export interface ApiOrderOptions extends PaginationParams {
   taker?: string;
   trader?: string;
   feeRecipient?: string;
-  limit?: number;
 }
 
 export interface TokenInfo {
