@@ -24,6 +24,14 @@ export class WebSocketFeed {
     }
   }
 
+  public broadcast(message: string, ...args: any[]) {
+    this.wsServerRef.clients.forEach(function each(client) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  }
+
   private removeConnection(ws: WebSocket) {
     this.log('debug', 'Websocket disconnected, unregistering');
     this.websockets.delete(ws);

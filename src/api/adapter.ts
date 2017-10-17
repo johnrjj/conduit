@@ -2,25 +2,12 @@ import { BigNumber } from 'bignumber.js';
 import { ZeroEx, SignedOrder as ZeroExSignedOrder } from '0x.js';
 import { OrderbookOrder, SignedOrder } from '../types/core';
 import { OrderApiPayload } from '../types/relayer-spec';
+import { serializeSignedOrder } from '../util/order';
 
 const mapSignedOrderToOrderApiPayload = (o: OrderbookOrder): OrderApiPayload => {
   const { signedOrder } = o;
   const mapped = {
-    signedOrder: {
-      exchangeContractAddress: signedOrder.exchangeContractAddress,
-      maker: signedOrder.maker,
-      taker: signedOrder.taker,
-      makerTokenAddress: signedOrder.makerTokenAddress,
-      takerTokenAddress: signedOrder.takerTokenAddress,
-      feeRecipient: signedOrder.feeRecipient,
-      makerTokenAmount: signedOrder.makerTokenAmount.toString(),
-      takerTokenAmount: signedOrder.takerTokenAmount.toString(),
-      makerFee: signedOrder.makerFee.toString(),
-      takerFee: signedOrder.takerFee.toString(),
-      expirationUnixTimestampSec: signedOrder.expirationUnixTimestampSec.toString(),
-      salt: signedOrder.salt.toString(),
-      ecSignature: signedOrder.ecSignature,
-    },
+    signedOrder: serializeSignedOrder(signedOrder),
   };
   return mapped;
 };
@@ -45,4 +32,4 @@ const mapOrderApiPayloadToSignedOrder = (payload: OrderApiPayload): SignedOrder 
   return parsedOrder;
 };
 
-export { mapSignedOrderToOrderApiPayload, mapOrderApiPayloadToSignedOrder };
+export { serializeSignedOrder, mapSignedOrderToOrderApiPayload, mapOrderApiPayloadToSignedOrder };

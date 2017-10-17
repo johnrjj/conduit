@@ -13,7 +13,7 @@ import { ZeroEx, ExchangeEvents, Web3Provider, LogFillContractEventArgs } from '
 import v0ApiRouteFactory from './api/routes';
 import { WebSocketFeed } from './websocket';
 import { Orderbook, InMemoryOrderbook } from './orderbook';
-import { RoutingError, BlockchainLogEvent } from './types/core';
+import { RoutingError, BlockchainLogEvent, OrderbookOrder } from './types/core';
 import { ConduitOrderAddMessage, ConduitOrderUpdateMessage, MessageTypes } from './types/messages';
 import { Readable, PassThrough } from 'stream';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
@@ -75,6 +75,7 @@ const zeroExStreamWrapper = new PassThrough({
 });
 zeroEx.exchange
   .subscribeAsync(ExchangeEvents.LogFill, {}, ev => {
+    logger.log('debug', 'LogFill received from 0x', ev);
     const logEvent = ev as BlockchainLogEvent;
     const args = ev.args as LogFillContractEventArgs;
     (logEvent as any).type = `Blockchain.${ev.event}`;
@@ -87,12 +88,15 @@ zeroEx.exchange
 zeroExStreamWrapper.pipe(orderbook);
 
 // Now we can subscribe to the (standardized) orderbook stream for relevant events
-orderbook.on(MessageTypes.CONDUIT_ORDER_ADD, (order: ConduitOrderAddMessage) => {
-  console.log('order added to orderbook', order);
+orderbook.on(MessageTypes.CONDUIT_ORDER_ADD, (order: OrderbookOrder) => {
+  console.log('Order added to orderbook', order);
+  websocketFeed.broadcast(JSON.stringify(order));
+
   /*...*/
 });
-orderbook.on(MessageTypes.CONDUIT_ORDER_UPDATE, (order: ConduitOrderUpdateMessage) => {
-  console.log('order updated on orderbook', order);
+orderbook.on(MessageTypes.CONDUIT_ORDER_UPDATE, (order: OrderbookOrder) => {
+  console.log('Order updated on orderbook', order);
+  websocketFeed.broadcast(JSON.stringify(order));
   /*...*/
 });
 

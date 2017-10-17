@@ -35,6 +35,21 @@ export interface Order {
   salt: BigNumber.BigNumber;
 }
 
+export interface SerializedOrder {
+  exchangeContractAddress: string;
+  maker: string;
+  taker: string;
+  makerTokenAddress: string;
+  takerTokenAddress: string;
+  feeRecipient: string;
+  makerTokenAmount: string;
+  takerTokenAmount: string;
+  makerFee: string;
+  takerFee: string;
+  expirationUnixTimestampSec: string;
+  salt: string;
+}
+
 export interface ECSignature {
   v: number;
   r: string;
@@ -45,11 +60,20 @@ export interface SignedOrder extends Order {
   ecSignature: ECSignature;
 }
 
+export interface SerializedSignedOrder extends SerializedOrder {
+  ecSignature: ECSignature;
+}
+
 export interface OrderbookOrder {
   signedOrder: SignedOrder;
   state: OrderState;
   remainingTakerTokenAmount: BigNumber.BigNumber;
-  pending?: PendingState;
+}
+
+export interface SerializedOrderbookOrder {
+  signedOrder: SerializedOrder;
+  state: OrderState;
+  remainingTakerTokenAmount: string;
 }
 
 export class RoutingError extends Error {
