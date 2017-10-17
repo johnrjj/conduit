@@ -4,9 +4,15 @@ import { writeFileSync } from 'fs';
 import { ZeroEx } from '0x.js';
 import { Orderbook } from './orderbook';
 import { TokenPair, FeeApiRequest, FeeApiResponse, ApiOrderOptions } from '../types/relayer-spec';
-import { OrderbookOrder, OrderState, SignedOrder, OrderHash } from '../types/core';
+import {
+  OrderbookOrder,
+  OrderState,
+  SignedOrder,
+  OrderHash,
+  OrderCancelMessage,
+} from '../types/core';
 import { BlockchainLogEvent, OrderFillMessage } from '../types/core';
-import { MessageTypes } from '../types/messages';
+import { EventTypes } from '../types/events';
 import { Logger } from '../util/logger';
 
 export interface InMemoryDatabase {
@@ -67,7 +73,7 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     };
 
     this.db.orderbook.set(orderHash, fullOrder);
-    this.emit(MessageTypes.CONDUIT_ORDER_ADD, fullOrder);
+    this.emit(EventTypes.CONDUIT_ORDER_ADD, fullOrder);
     return true;
   }
 
@@ -98,11 +104,18 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     this.push(msg);
     switch (msg.type) {
       case 'Blockchain.LogFill':
-        const blockchainLog = msg as BlockchainLogEvent;
-        this.handleOrderFillMessage(blockchainLog.args as OrderFillMessage);
+        const blockchainFillLog = msg as BlockchainLogEvent;
+        this.handleOrderFillMessage(blockchainFillLog.args as OrderFillMessage);
+        break;
+      case 'Blockchain.LogCancel':
+        const blockchainCancelLog = msg as BlockchainLogEvent;
+        this.log(
+          'debug',
+          'Doing nothing with Blockchain.LogCancel right now in in-memory orderbook'
+        );
         break;
       default:
-        this.emit(MessageTypes.CONDUIT_UNKNOWN, msg);
+        this.emit(EventTypes.CONDUIT_UNKNOWN, msg);
         break;
     }
     callback();
@@ -164,7 +177,7 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     };
     this.updateOrderbook(orderHash, updatedOrder);
 
-    this.emit(MessageTypes.CONDUIT_ORDER_UPDATE, updatedOrder);
+    this.emit(EventTypes.CONDUIT_ORDER_UPDATE, updatedOrder);
   }
 
   private orderbookToArray() {
@@ -183,6 +196,7 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     this.log('error', err.message, { message: message });
     this.emit('error', err);
   }
+
   private saveSnapshot() {
     const datestamp = new Date().toISOString();
     const location = `./orderbook-${datestamp}.json`;

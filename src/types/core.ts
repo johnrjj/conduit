@@ -84,3 +84,4 @@ export type BlockchainLogEvent = LogEvent<
   LogFillContractEventArgs | LogCancelContractEventArgs | LogErrorContractEventArgs
 >;
 export type OrderFillMessage = LogFillContractEventArgs;
+export type OrderCancelMessage = LogCancelContractEventArgs;

@@ -1,6 +1,6 @@
 import { OrderbookOrder, SignedOrder } from '../types/core';
 import { OrderApiPayload } from '../types/relayer-spec';
-import { SerializedSignedOrder } from '../types/core';
+import { SerializedSignedOrder, SerializedOrderbookOrder } from '../types/core';
 
 const serializeSignedOrder = (signedOrder: SignedOrder): SerializedSignedOrder => {
   const serializedSignedOrder = {
@@ -21,4 +21,13 @@ const serializeSignedOrder = (signedOrder: SignedOrder): SerializedSignedOrder =
   return serializedSignedOrder;
 };
 
-export { serializeSignedOrder };
+const serializeOrderbookOrder = (orderbookOrder: OrderbookOrder): SerializedOrderbookOrder => {
+  const serializedOrderbookOrder: SerializedOrderbookOrder = {
+    signedOrder: serializeSignedOrder(orderbookOrder.signedOrder),
+    state: orderbookOrder.state,
+    remainingTakerTokenAmount: orderbookOrder.remainingTakerTokenAmount.toString(),
+  };
+  return serializedOrderbookOrder;
+};
+
+export { serializeSignedOrder, serializeOrderbookOrder };

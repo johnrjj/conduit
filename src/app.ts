@@ -9,13 +9,20 @@ import * as BigNumber from 'bignumber.js';
 import * as ProviderEngine from 'web3-provider-engine';
 import * as FilterSubprovider from 'web3-provider-engine/subproviders/filters';
 import * as RpcSubprovider from 'web3-provider-engine/subproviders/rpc';
-import { ZeroEx, ExchangeEvents, Web3Provider, LogFillContractEventArgs } from '0x.js';
+import {
+  ZeroEx,
+  ExchangeEvents,
+  Web3Provider,
+  LogFillContractEventArgs,
+  LogCancelContractEventArgs,
+} from '0x.js';
 import v0ApiRouteFactory from './api/routes';
 import { WebSocketFeed } from './websocket';
 import { Orderbook, InMemoryOrderbook } from './orderbook';
 import { RoutingError, BlockchainLogEvent, OrderbookOrder } from './types/core';
-import { ConduitOrderAddMessage, ConduitOrderUpdateMessage, MessageTypes } from './types/messages';
+import { ConduitOrderAddEvent, ConduitOrderUpdateEvent, EventTypes } from './types/events';
 import { Readable, PassThrough } from 'stream';
+import { serializeOrderbookOrder } from './util/order';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 import { generateInMemoryDbFromJson } from './util/seed-data';
 
@@ -84,20 +91,38 @@ zeroEx.exchange
   .then(cancelToken => {})
   .catch(e => logger.error(e));
 
+zeroEx.exchange
+  .subscribeAsync(ExchangeEvents.LogCancel, {}, ev => {
+    logger.log('debug', 'LogCancel received from 0x', ev);
+    const logEvent = ev as BlockchainLogEvent;
+    const args = ev.args as LogCancelContractEventArgs;
+    (logEvent as any).type = `Blockchain.${ev.event}`;
+    zeroExStreamWrapper.push(ev);
+  })
+  .then(cancelToken => {})
+  .catch(e => logger.error(e));
+
 // Feed all relevant event streams into orderbook
 zeroExStreamWrapper.pipe(orderbook);
 
 // Now we can subscribe to the (standardized) orderbook stream for relevant events
-orderbook.on(MessageTypes.CONDUIT_ORDER_ADD, (order: OrderbookOrder) => {
+orderbook.on(EventTypes.CONDUIT_ORDER_ADD, (order: OrderbookOrder) => {
   console.log('Order added to orderbook', order);
-  websocketFeed.broadcast(JSON.stringify(order));
-
-  /*...*/
+  const event: ConduitOrderAddEvent = {
+    ...serializeOrderbookOrder(order),
+    type: EventTypes.CONDUIT_ORDER_ADD,
+    time: new Date().toISOString(),
+  };
+  websocketFeed.broadcast(JSON.stringify(event));
 });
-orderbook.on(MessageTypes.CONDUIT_ORDER_UPDATE, (order: OrderbookOrder) => {
+orderbook.on(EventTypes.CONDUIT_ORDER_UPDATE, (order: OrderbookOrder) => {
   console.log('Order updated on orderbook', order);
-  websocketFeed.broadcast(JSON.stringify(order));
-  /*...*/
+  const event: ConduitOrderUpdateEvent = {
+    ...serializeOrderbookOrder(order),
+    type: EventTypes.CONDUIT_ORDER_UPDATE,
+    time: new Date().toISOString(),
+  };
+  websocketFeed.broadcast(JSON.stringify(event));
 });
 
 export default app;
