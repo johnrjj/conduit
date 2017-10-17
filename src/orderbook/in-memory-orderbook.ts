@@ -6,6 +6,7 @@ import { Orderbook } from './orderbook';
 import { TokenPair, FeeApiRequest, FeeApiResponse, ApiOrderOptions } from '../types/relayer-spec';
 import { OrderbookOrder, OrderState, SignedOrder, OrderHash } from '../types/core';
 import { BlockchainLogEvent, OrderFillMessage } from '../types/core';
+import { MessageTypes } from '../types/messages';
 import { Logger } from '../util/logger';
 
 export interface InMemoryDatabase {
@@ -64,13 +65,14 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
       state,
       remainingTakerTokenAmount,
     };
+
     this.db.orderbook.set(orderHash, fullOrder);
-    this.emit('Orderbook.OrderAdded', fullOrder);
+    this.emit(MessageTypes.CONDUIT_ORDER_ADD, fullOrder);
     return true;
   }
 
   async getOrders(options?: ApiOrderOptions | undefined): Promise<OrderbookOrder[]> {
-    this.saveSnapshot();
+    // this.saveSnapshot();
     const orders = this.orderbookToArray().filter(x => x.state === OrderState.OPEN);
     return orders;
   }
@@ -91,19 +93,16 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
   _read() {}
 
   _write(msg, encoding, callback) {
+    this.log('debug', `InMemoryRepo received a message of type ${msg.type || 'unknown'}`);
     // push downstream
     this.push(msg);
-
-    this.log('debug', 'InMemoryRepo received a message');
-    this.log('debug', msg);
-
     switch (msg.type) {
       case 'Blockchain.LogFill':
         const blockchainLog = msg as BlockchainLogEvent;
         this.handleOrderFillMessage(blockchainLog.args as OrderFillMessage);
         break;
       default:
-        this.emit('Orderbook.Unrecgnized', msg);
+        this.emit(MessageTypes.CONDUIT_UNKNOWN, msg);
         break;
     }
     callback();
@@ -113,13 +112,13 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     orderHash: string,
     signedOrder: SignedOrder
   ): Promise<BigNumber.BigNumber> {
-    const makerAmountUnavailable = await this.zeroEx.exchange.getUnavailableTakerAmountAsync(
+    const takerAmountUnavailable = await this.zeroEx.exchange.getUnavailableTakerAmountAsync(
       orderHash
     );
-    const makerAmountRemaining = signedOrder.makerTokenAmount.sub(
-      makerAmountUnavailable as BigNumber.BigNumber
+    const takerAmountRemaining = signedOrder.takerTokenAmount.sub(
+      new BigNumber.BigNumber(takerAmountUnavailable)
     );
-    return makerAmountRemaining;
+    return takerAmountRemaining;
   }
 
   private updateOrderbook(orderHash: string, updatedOrder: OrderbookOrder): boolean {
@@ -165,7 +164,7 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     };
     this.updateOrderbook(orderHash, updatedOrder);
 
-    this.emit('Orderbook.UpdatedOrder', updatedOrder);
+    this.emit(MessageTypes.CONDUIT_ORDER_UPDATE, updatedOrder);
   }
 
   private orderbookToArray() {

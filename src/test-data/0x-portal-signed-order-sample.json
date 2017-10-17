@@ -108,3 +108,76 @@
 // 	"exchangeContract": "0x90fe2af704b34e0224bf2299c838e04d4dcf1364",
 // 	"networkId": 42
 // }
+
+// {
+// 	"maker": {
+// 		"address": "0x2db47c8f40b00b65f11b36615e0c9073adf20350",
+// 		"token": {
+// 			"name": "Ether Token",
+// 			"symbol": "WETH",
+// 			"decimals": 18,
+// 			"address": "0x05d090b51c40b020eab3bfcb6a2dff130df22e9c"
+// 		},
+// 		"amount": "100000000000000000",
+// 		"feeAmount": "0"
+// 	},
+// 	"taker": {
+// 		"address": "",
+// 		"token": {
+// 			"name": "Maker DAO",
+// 			"symbol": "MKR",
+// 			"decimals": 18,
+// 			"address": "0x1dad4783cf3fe3085c1426157ab175a6119a04ba"
+// 		},
+// 		"amount": "1000000000000000000",
+// 		"feeAmount": "0"
+// 	},
+// 	"expiration": "1509422400",
+// 	"feeRecipient": "0x0000000000000000000000000000000000000000",
+// 	"salt": "18929560968920700020615495766718419468750898213881885592159012019123488446924",
+// 	"signature": {
+// 		"v": 28,
+// 		"r": "0x35af2ab2352a963a70d6f159bc95302b3aaa99eb7500746e06a7b1a7d172665c",
+// 		"s": "0x0f53f7d33b56854991aed94316117b0a1e5a4696d49c7109b4a1941237a6dc39",
+// 		"hash": "0x5cf7110268ef498e27179968bfe1317abaa9fade7823dea9cd19ec92dbd2d303"
+// 	},
+// 	"exchangeContract": "0x90fe2af704b34e0224bf2299c838e04d4dcf1364",
+// 	"networkId": 42
+// }
+
+// use this one
+// {
+// 	"maker": {
+// 		"address": "0x2db47c8f40b00b65f11b36615e0c9073adf20350",
+// 		"token": {
+// 			"name": "Ether Token",
+// 			"symbol": "WETH",
+// 			"decimals": 18,
+// 			"address": "0x05d090b51c40b020eab3bfcb6a2dff130df22e9c"
+// 		},
+// 		"amount": "100000000000000000",
+// 		"feeAmount": "0"
+// 	},
+// 	"taker": {
+// 		"address": "0x0000000000000000000000000000000000000000",
+// 		"token": {
+// 			"name": "Maker DAO",
+// 			"symbol": "MKR",
+// 			"decimals": 18,
+// 			"address": "0x1dad4783cf3fe3085c1426157ab175a6119a04ba"
+// 		},
+// 		"amount": "1000000000000000000",
+// 		"feeAmount": "0"
+// 	},
+// 	"expiration": "1509422400",
+// 	"feeRecipient": "0x0000000000000000000000000000000000000000",
+// 	"salt": "4397590059906940801017912926608431060569097014261011144166146010891362256454",
+// 	"signature": {
+// 		"v": 27,
+// 		"r": "0x50de2a956fca1e815a559b1157a873674d83ae4a0bc776526e760d034ce2ae3f",
+// 		"s": "0x71f1d9eb1f3d9fa6c8d1da037cebb9b114bb6ac6d27900404ea21739197a695d",
+// 		"hash": "0x3a088a93b251eccf904fed21e45bfc669d87d1601605af6e0ac4b5ba87d61f74"
+// 	},
+// 	"exchangeContract": "0x90fe2af704b34e0224bf2299c838e04d4dcf1364",
+// 	"networkId": 42
+// }

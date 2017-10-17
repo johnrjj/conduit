@@ -19,7 +19,7 @@ export class WebSocketFeed {
       this.websockets.add(ws);
       ws.on('close', () => this.removeConnection(ws));
     } catch (e) {
-      console.log(e);
+      this.log('error', e);
       next(e);
     }
   }

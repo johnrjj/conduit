@@ -20,6 +20,11 @@ export interface OrderApiPayload {
   };
 }
 
+export interface PaginationParams {
+  page: number;
+  per_page: number;
+}
+
 export interface FeeApiRequest {
   exchangeContractAddress: string;
   maker: string;
@@ -38,7 +43,7 @@ export interface FeeApiResponse {
   takerFee: string;
 }
 
-export interface ApiOrderOptions {
+export interface ApiOrderOptions extends PaginationParams {
   ascByBaseToken?: string;
   exchangeContractAddress?: string;
   isExpired?: boolean;

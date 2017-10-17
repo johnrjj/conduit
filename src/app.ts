@@ -14,7 +14,7 @@ import v0ApiRouteFactory from './api/routes';
 import { WebSocketFeed } from './websocket';
 import { Orderbook, InMemoryOrderbook } from './orderbook';
 import { RoutingError, BlockchainLogEvent } from './types/core';
-import { ConduitOrderAddMessage, ConduitOrderUpdateMessage } from './types/messages';
+import { ConduitOrderAddMessage, ConduitOrderUpdateMessage, MessageTypes } from './types/messages';
 import { Readable, PassThrough } from 'stream';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 import { generateInMemoryDbFromJson } from './util/seed-data';
@@ -87,10 +87,12 @@ zeroEx.exchange
 zeroExStreamWrapper.pipe(orderbook);
 
 // Now we can subscribe to the (standardized) orderbook stream for relevant events
-orderbook.on('Orderbook.OrderAdded', (order: ConduitOrderAddMessage) => {
+orderbook.on(MessageTypes.CONDUIT_ORDER_ADD, (order: ConduitOrderAddMessage) => {
+  console.log('order added to orderbook', order);
   /*...*/
 });
-orderbook.on('Orderbook.OrderUpdated', (order: ConduitOrderUpdateMessage) => {
+orderbook.on(MessageTypes.CONDUIT_ORDER_UPDATE, (order: ConduitOrderUpdateMessage) => {
+  console.log('order updated on orderbook', order);
   /*...*/
 });
 

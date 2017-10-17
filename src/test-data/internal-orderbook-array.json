@@ -7,16 +7,16 @@
       "takerFee": "0",
       "makerTokenAmount": "100000000000000000",
       "makerTokenAddress": "0x05d090b51c40b020eab3bfcb6a2dff130df22e9c",
-      "takerTokenAmount": "10000000000000000000",
+      "takerTokenAmount": "1000000000000000000",
       "takerTokenAddress": "0x1dad4783cf3fe3085c1426157ab175a6119a04ba",
-      "salt": "33217635142032433127096730686276847741052859040945219698227894976326023877285",
+      "salt": "4397590059906940801017912926608431060569097014261011144166146010891362256454",
       "exchangeContractAddress": "0x90fe2af704b34e0224bf2299c838e04d4dcf1364",
       "feeRecipient": "0x0000000000000000000000000000000000000000",
-      "expirationUnixTimestampSec": "1509484860",
+      "expirationUnixTimestampSec": "1509422400",
       "ecSignature": {
         "v": 27,
-        "r": "0xa1d5cf56b57a8c353894648da7e8d37e2fec045768f86d3dc74d2f9d687a4663",
-        "s": "0x1bf96f1b5890a382c5ff2469c8733b1698d42e48a13531cdca72aa4f5401b86b"
+        "r": "0x50de2a956fca1e815a559b1157a873674d83ae4a0bc776526e760d034ce2ae3f",
+        "s": "0x71f1d9eb1f3d9fa6c8d1da037cebb9b114bb6ac6d27900404ea21739197a695d"
       }
     },
     "state": "OPEN",

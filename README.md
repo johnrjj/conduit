@@ -1,4 +1,4 @@
-#  [![Conduit](https://storage.googleapis.com/material-icons/external-assets/v4/icons/svg/ic_blur_circular_black_24px.svg)](https://nodesource.com/products/nsolid) Conduit - 0x Relayer API
+#  [![Conduit](https://storage.googleapis.com/material-icons/external-assets/v4/icons/svg/ic_blur_circular_black_24px.svg)](#) Conduit - 0x Relayer API
 
 [![CircleCI](https://circleci.com/gh/johnrjj/conduit.svg?style=svg)](https://circleci.com/gh/johnrjj/conduit/)
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://github.com/prettier/prettier)

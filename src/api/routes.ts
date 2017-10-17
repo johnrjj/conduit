@@ -13,6 +13,7 @@ import {
   ApiOrderOptions,
   FeeApiRequest,
   FeeApiResponse,
+  PaginationParams,
 } from '../types/relayer-spec';
 
 const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
@@ -21,6 +22,7 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   router.use(bodyParser.urlencoded({ extended: true }));
 
   router.get('/token_pairs', async (req, res) => {
+    const { page, per_page }: PaginationParams = req.query;
     const tokens = await zeroEx.tokenRegistry.getTokensAsync();
     const pairs = pairTokens(tokens);
     res.status(201).json(pairs);
