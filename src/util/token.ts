@@ -1,17 +1,12 @@
 import { Token } from '0x.js';
-import { TokenPair } from '../types/relayer-spec';
 
-const pairTokens = (arr: Array<Token>) => {
-  let accum: Array<TokenPair> = [];
+const pairTokens = (arr: Array<Token>): Array<Array<string>> => {
+  let accum: Array<Array<string>> = [];
   for (let i = 0; i < arr.length - 1; i++) {
     for (let j = i + 1; j < arr.length; j++) {
       const tokenA = arr[i];
       const tokenB = arr[j];
-      const o = {
-        [tokenA.name]: tokenA,
-        [tokenB.name]: tokenB,
-      };
-      accum.push(o);
+      accum.push([tokenA.address, tokenB.address]);
     }
   }
   return accum;

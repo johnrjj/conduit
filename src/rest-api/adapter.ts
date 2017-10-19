@@ -1,7 +1,7 @@
 import { BigNumber } from 'bignumber.js';
 import { ZeroEx, SignedOrder as ZeroExSignedOrder } from '0x.js';
 import { OrderbookOrder, SignedOrder } from '../types/core';
-import { OrderApiPayload } from '../types/relayer-spec';
+import { OrderApiPayload } from './types';
 import { serializeSignedOrder } from '../util/order';
 
 const mapSignedOrderToOrderApiPayload = (o: OrderbookOrder): OrderApiPayload => {

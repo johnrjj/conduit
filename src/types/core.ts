@@ -13,11 +13,6 @@ export enum OrderState {
   'UNFUNDED' = 'UNFUNDED',
 }
 
-export interface PendingState {
-  fillAmount: string;
-  pending: string;
-}
-
 export type OrderHash = string;
 
 export interface Order {
@@ -71,7 +66,7 @@ export interface OrderbookOrder {
 }
 
 export interface SerializedOrderbookOrder {
-  signedOrder: SerializedOrder;
+  signedOrder: SerializedSignedOrder;
   state: OrderState;
   remainingTakerTokenAmount: string;
 }

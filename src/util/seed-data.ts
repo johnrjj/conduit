@@ -1,8 +1,8 @@
 import { readFileSync } from 'fs';
 import { ZeroEx, SignedOrder as ZeroExSignedOrder } from '0x.js';
-import { mapOrderApiPayloadToSignedOrder } from '../api/adapter';
+import { mapOrderApiPayloadToSignedOrder } from '../rest-api/adapter';
 import { OrderbookOrder } from '../types/core';
-import { OrderApiPayload } from '../types/relayer-spec';
+import { OrderApiPayload } from '../rest-api/types';
 import { InMemoryDatabase } from '../orderbook/in-memory-orderbook';
 
 const generateInMemoryDbFromJson = (zeroEx: ZeroEx): InMemoryDatabase => {

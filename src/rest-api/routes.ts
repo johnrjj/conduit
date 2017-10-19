@@ -9,23 +9,37 @@ import { Orderbook } from '../orderbook';
 import { mapSignedOrderToOrderApiPayload } from './adapter';
 import {
   OrderApiPayload,
-  TokenPair,
   ApiOrderOptions,
   FeeApiRequest,
   FeeApiResponse,
   PaginationParams,
-} from '../types/relayer-spec';
+} from './types';
 
 const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   const router = Router();
   router.use(bodyParser.json({ type: '*/*' }));
   router.use(bodyParser.urlencoded({ extended: true }));
 
+  // [
+  //   [
+  //     "Address1",
+  //     "Address2",
+  //   ],
+  //   [
+  //     ...
+  //   ]
+  // ]
   router.get('/token_pairs', async (req, res) => {
     const { page, per_page }: PaginationParams = req.query;
     const tokens = await zeroEx.tokenRegistry.getTokensAsync();
     const pairs = pairTokens(tokens);
     res.status(201).json(pairs);
+  });
+
+  router.get('/tokens', async (req, res) => {
+    const tokens = await zeroEx.tokenRegistry.getTokensAsync();
+    // need to flip array into object with address as key
+    // return
   });
 
   router.get('/orders', async (req, res) => {

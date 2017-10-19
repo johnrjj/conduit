@@ -1,6 +1,4 @@
-import { OrderbookOrder, SignedOrder } from '../types/core';
-import { OrderApiPayload } from '../types/relayer-spec';
-import { SerializedSignedOrder, SerializedOrderbookOrder } from '../types/core';
+import { OrderbookOrder, SignedOrder, SerializedSignedOrder, SerializedOrderbookOrder } from '../types/core';
 
 const serializeSignedOrder = (signedOrder: SignedOrder): SerializedSignedOrder => {
   const serializedSignedOrder = {

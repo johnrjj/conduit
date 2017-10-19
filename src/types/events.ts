@@ -2,7 +2,9 @@ import { SerializedOrderbookOrder } from './core';
 
 export interface ConduitEvent {
   type: string;
-  time: string;
+  channel: string;
+  payload: any;
+  channelId?: number;
 }
 
 export enum EventTypes {
