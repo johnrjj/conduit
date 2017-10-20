@@ -1,4 +1,9 @@
-import { OrderbookOrder, SignedOrder, SerializedSignedOrder, SerializedOrderbookOrder } from '../types/core';
+import {
+  OrderbookOrder,
+  SignedOrder,
+  SerializedSignedOrder,
+  SerializedOrderbookOrder,
+} from '../types/core';
 
 const serializeSignedOrder = (signedOrder: SignedOrder): SerializedSignedOrder => {
   const serializedSignedOrder = {

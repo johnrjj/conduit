@@ -50,7 +50,10 @@ export class WebSocketFeed {
             this.requestChannelSubscription(ws, subscribeRequest.payload);
             break;
           default:
-            this.log('debug', `Unrecognized message type ${data.type} received from client websocket`);
+            this.log(
+              'debug',
+              `Unrecognized message type ${data.type} received from client websocket`
+            );
             break;
         }
         console.log(data);

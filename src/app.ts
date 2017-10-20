@@ -18,34 +18,34 @@ import {
 } from '0x.js';
 import v0ApiRouteFactory from './rest-api/routes';
 import { WebSocketFeed } from './ws-api/websocket';
-import { Orderbook, InMemoryOrderbook } from './orderbook';
+import { Orderbook, PostgresOrderbook, InMemoryOrderbook } from './orderbook';
 import { RoutingError, BlockchainLogEvent, OrderbookOrder } from './types/core';
 import { ConduitOrderAddEvent, ConduitOrderUpdateEvent, EventTypes } from './types/events';
 import { Readable, PassThrough } from 'stream';
 import { serializeOrderbookOrder } from './util/order';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 import { generateInMemoryDbFromJson } from './util/seed-data';
+import { orderbookFactory } from './util/orderbook';
+import { Pool, PoolConfig } from 'pg';
+import config from './config';
 
 BigNumber.BigNumber.config({
   EXPONENTIAL_AT: 1000,
 });
 
-const logger: Logger = ConsoleLoggerFactory({ level: 'debug' });
-
-const KOVAN_ENDPOINT = 'https://kovan.infura.io';
-const KOVAN_STARTING_BLOCK = 3117574;
-const KOVAN_0X_EXCHANGE_SOL_ADDRESS = '0x90fe2af704b34e0224bf2299c838e04d4dcf1364';
+const isProduction = config.NODE_ENV === 'production' ? true : false;
+const logger: Logger = ConsoleLoggerFactory({ level: config.LOG_LEVEL });
+const BLOCKCHAIN_NETWORK_ENDPOINT = config.BLOCKCHAIN_NETWORK_ENDPOINT;
+const BLOCKCHAIN_STARTING_BLOCK = config.BLOCKCHAIN_STARTING_BLOCK;
+const ZEROEX_EXCHANGE_SOL_ADDRESS = config.ZERO_EX_EXCHANGE_SOL_ADDRESS;
 
 const providerEngine = new ProviderEngine();
 providerEngine.addProvider(new FilterSubprovider());
-providerEngine.addProvider(new RpcSubprovider({ rpcUrl: KOVAN_ENDPOINT }));
+providerEngine.addProvider(new RpcSubprovider({ rpcUrl: BLOCKCHAIN_NETWORK_ENDPOINT }));
 providerEngine.start();
 
 const zeroEx = new ZeroEx(providerEngine);
-
-// temporary
-const initialDb = generateInMemoryDbFromJson(zeroEx);
-const orderbook: Orderbook = new InMemoryOrderbook({ zeroEx, logger, initialDb });
+const orderbook = orderbookFactory({ config, zeroEx, logger });
 
 const app = express();
 const expressWs = expressWsFactory(app);
@@ -104,26 +104,7 @@ zeroEx.exchange
 zeroExStreamWrapper.pipe(orderbook);
 
 // Now we can subscribe to the (standardized) orderbook stream for relevant events
-orderbook.on(EventTypes.CONDUIT_ORDER_ADD, (order: OrderbookOrder) => {
-  // console.log('Order added to orderbook', order);
-  // const event: ConduitOrderAddEvent = {
-  //   type: 'update',
-  //   channel: 'orders',
-  //   channelId: 7,
-  //   signedOrder: order.signedOrder,
-  // };
-  // websocketFeed.broadcast(JSON.stringify(event));
-});
-orderbook.on(EventTypes.CONDUIT_ORDER_UPDATE, (order: OrderbookOrder) => {
-  // console.log('Order updated on orderbook', order);
-  // const event: ConduitOrderUpdateEvent = {
-  //   type: 'update',
-  //   channel: 'orders',
-  //   channelId: 7,
-  //   payload: order.signedOrder,
-  //   signedOrder: order.signedOrder,
-  // };
-  // websocketFeed.broadcast(JSON.stringify(event));
-});
+orderbook.on(EventTypes.CONDUIT_ORDER_ADD, (order: OrderbookOrder) => {});
+orderbook.on(EventTypes.CONDUIT_ORDER_UPDATE, (order: OrderbookOrder) => {});
 
 export default app;

@@ -10,8 +10,9 @@ import {
   SignedOrder,
   OrderHash,
   OrderCancelMessage,
+  OrderFillMessage,
+  BlockchainLogEvent,
 } from '../types/core';
-import { BlockchainLogEvent, OrderFillMessage } from '../types/core';
 import { EventTypes } from '../types/events';
 import { Logger } from '../util/logger';
 
