@@ -7,8 +7,10 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc",
-    "start": "tsc && node dist/index",
+    "start": "node dist/index",
+    "dev": "tsc && node dist/index",
     "now-start": "node dist/index",
+    "postinstall": "npm run build",
     "deploy": "now && now alias && now 0x-relayer-api --safe ",
     "test": "jest",
     "prettier": "prettier --single-quote --print-width 100 --trailing-comma es5 --write 'src/**/*.ts'"
