@@ -23,22 +23,20 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   router.get('/token_pairs', async (req, res) => {
     const { page, per_page }: PaginationParams = req.query;
     const pairs = await orderbook.getTokenPairs();
-    // const tokens = await zeroEx.tokenRegistry.getTokensAsync();
-    // const pairs = pairTokens(tokens);
     res.status(201).json(pairs);
   });
 
+  // deprecated, still keeping it serving direct from zeroex token registry
   router.get('/tokens', async (req, res) => {
     const tokens = await zeroEx.tokenRegistry.getTokensAsync();
-    // need to flip array into object with address as key
-    // return
+    res.status(201).json(tokens);
   });
 
   router.get('/orders', async (req, res) => {
     const options: ApiOrderOptions = req.query;
     const orders = await orderbook.getOrders(options);
-    const apiFormattedOrders = orders.map(mapSignedOrderToOrderApiPayload);
-    res.status(201).json(apiFormattedOrders);
+    // const apiFormattedOrders = orders.map(mapSignedOrderToOrderApiPayload);
+    res.status(201).json(orders);
   });
 
   router.get('/order/:orderHash', async (req, res) => {
@@ -47,8 +45,8 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
     if (!order) {
       return res.sendStatus(404);
     }
-    const apiFormattedOrder = mapSignedOrderToOrderApiPayload(order);
-    res.json(apiFormattedOrder);
+    // const apiFormattedOrder = mapSignedOrderToOrderApiPayload(order);
+    res.json(order);
   });
 
   router.post('/fees', async (req, res) => {

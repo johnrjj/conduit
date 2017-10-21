@@ -4,8 +4,8 @@ import { OrderbookOrder, SignedOrder } from '../types/core';
 
 interface Orderbook extends Duplex {
   getTokenPairs(): Promise<Array<TokenPair>>;
-  getOrders(options?: ApiOrderOptions): Promise<Array<OrderbookOrder>>;
-  getOrder(orderHash: string): Promise<OrderbookOrder | undefined>;
+  getOrders(options?: ApiOrderOptions): Promise<Array<SignedOrder>>;
+  getOrder(orderHash: string): Promise<SignedOrder>;
   getFees(feePayload: FeeApiRequest): Promise<FeeApiResponse>;
   postOrder(orderHash: string, signedOrder: SignedOrder): Promise<boolean>;
 }

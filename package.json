@@ -14,7 +14,7 @@
     "prettier": "prettier --single-quote --print-width 100 --trailing-comma es5 --write 'src/**/*.ts'"
   },
   "dependencies": {
-    "0x-json-schemas": "^0.6.1",
+    "0x-json-schemas": "^0.6.5",
     "0x.js": "^0.22.1",
     "body-parser": "^1.18.2",
     "cors": "^2.8.4",

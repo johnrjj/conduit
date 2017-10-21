@@ -1,6 +1,8 @@
 import * as BigNumber from 'bignumber.js';
 import { Duplex } from 'stream';
 import { ZeroEx } from '0x.js';
+import { Pool } from 'pg';
+import { SQL } from 'sql-template-strings';
 import { Orderbook } from './orderbook';
 import { FeeApiRequest, FeeApiResponse, ApiOrderOptions, TokenPair } from '../rest-api/types';
 import {
@@ -14,9 +16,6 @@ import {
 } from '../types/core';
 import { EventTypes } from '../types/events';
 import { Logger } from '../util/logger';
-import { Pool } from 'pg';
-import { SQL } from 'sql-template-strings';
-const TOKEN_PAIRS_QUERY = '';
 
 export interface PostgresOrderbookOptions {
   postgresPool: Pool;
@@ -24,6 +23,25 @@ export interface PostgresOrderbookOptions {
   tokenTableName: string;
   tokenPairTableName: string;
   logger?: Logger;
+}
+
+export interface PostgresOrderModel {
+  exchange_contract_address: string;
+  maker: string;
+  taker: string;
+  maker_token_address: string;
+  taker_token_address: string;
+  fee_recipient: string;
+  maker_token_amount: string;
+  taker_token_amount: string;
+  maker_fee: string;
+  taker_fee: string;
+  expiration_unix_timestamp_sec: string;
+  salt: string;
+  ec_sig_v: string;
+  ec_sig_r: string;
+  ec_sig_s: string;
+  order_hash: string;
 }
 
 export class PostgresOrderbook extends Duplex implements Orderbook {
@@ -61,12 +79,14 @@ export class PostgresOrderbook extends Duplex implements Orderbook {
     const res = await this.pool.query(SQL`
       select 
         t1.address as base_token_address,
-        t1.alias as base_token_alias,
+        t1.symbol as base_token_symbol,
+        t1.name as base_token_name,
         t1.min_amount as base_token_min_amount,
         t1.max_amount as base_token_max_amount,
         t1.precision as base_token_precision,
         t2.address as quote_token_address,
-        t2.alias as quote_token_alias,
+        t2.symbol as quote_token_alias,
+        t2.name as quote_token_name,
         t2.min_amount as quote_token_min_amount,
         t2.max_amount as quote_token_max_amount,
         t2.precision as quote_token_precision
@@ -74,29 +94,66 @@ export class PostgresOrderbook extends Duplex implements Orderbook {
         INNER JOIN tokens t1 ON (tp.base_token = t1.address)
         INNER JOIN tokens t2 ON (tp.quote_token = t2.address)
     `);
-    const pairs = res.rows;
-    const formattedPairs = pairs; // format here...
+    const pairs = res.rows.map(row => {
+      const pair: TokenPair = {
+        [row.base_token_alias]: {
+          address: row.base_token_address,
+          maxAmount: row.base_token_max_amount,
+          minAmount: row.base_token_min_amount,
+          precision: parseInt(row.base_token_precision, 10),
+        },
+        [row.quote_token_alias]: {
+          address: row.quote_token_address,
+          maxAmount: row.quote_token_max_amount,
+          minAmount: row.quote_token_min_amount,
+          precision: parseInt(row.quote_token_precision, 10),
+        },
+      };
+      return pair;
+    });
     return pairs;
   }
 
-  async getOrders(options?: ApiOrderOptions | undefined): Promise<OrderbookOrder[]> {
+  private formatOrderFromDb(dbOrder: PostgresOrderModel): SignedOrder {
+    const order: SignedOrder = {
+      exchangeContractAddress: dbOrder.exchange_contract_address,
+      maker: dbOrder.maker,
+      taker: dbOrder.taker,
+      makerTokenAddress: dbOrder.maker_token_address,
+      takerTokenAddress: dbOrder.taker_token_address,
+      feeRecipient: dbOrder.fee_recipient,
+      makerTokenAmount: new BigNumber.BigNumber(dbOrder.maker_token_amount),
+      takerTokenAmount: new BigNumber.BigNumber(dbOrder.taker_token_amount),
+      makerFee: new BigNumber.BigNumber(dbOrder.maker_fee),
+      takerFee: new BigNumber.BigNumber(dbOrder.taker_fee),
+      expirationUnixTimestampSec: new BigNumber.BigNumber(dbOrder.expiration_unix_timestamp_sec),
+      salt: new BigNumber.BigNumber(dbOrder.salt),
+      ecSignature: {
+        v: parseInt(dbOrder.ec_sig_v, 10),
+        r: dbOrder.ec_sig_r,
+        s: dbOrder.ec_sig_v,
+      },
+    };
+    return order;
+  }
+
+  async getOrders(options?: ApiOrderOptions | undefined): Promise<SignedOrder[]> {
     const res = await this.pool.query(SQL`
-    select * 
-    from orders
+      select * 
+      from orders
   `);
-    const unformattedOrders = res.rows;
-    const formattedOrders = unformattedOrders; //.map(mapRawOrderToSignedOrder);
+    const formattedOrders = res.rows.map(this.formatOrderFromDb);
     return formattedOrders;
   }
 
-  async getOrder(orderHash: string): Promise<OrderbookOrder | undefined> {
+  async getOrder(orderHash: string): Promise<SignedOrder> {
     const res = await this.pool.query(SQL`
       select * 
       from orders
       where order_hash = ${orderHash}
     `);
     console.log(res.rows[0]);
-    const formattedOrder = res.rows[0];
+    const formattedOrder = this.formatOrderFromDb(res.rows[0]);
     return formattedOrder;
   }
 

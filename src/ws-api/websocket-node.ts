@@ -74,7 +74,7 @@ export class WebSocketNode {
     console.log(`base token: ${baseTokenAddress}`);
     console.log(`quote token: ${quoteTokenAddress}`);
     console.log(`include snapshot: ${snapshot}, snapshot limit: ${limit}`);
-    // somehow register
+    // register
   }
 
   private removeConnection(ws: WebSocket) {

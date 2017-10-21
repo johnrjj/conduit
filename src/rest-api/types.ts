@@ -65,9 +65,8 @@ export interface TokenPair {
 
 export interface TokenInfo {
   address: string;
-  symbol: string;
-  decimals: number;
   minAmount?: string;
   maxAmount?: string;
   precision?: number;
+  symbol?: string; // nonstandard
 }

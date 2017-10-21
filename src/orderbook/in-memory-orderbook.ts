@@ -78,18 +78,20 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     return true;
   }
 
-  async getOrders(options?: ApiOrderOptions | undefined): Promise<OrderbookOrder[]> {
+  async getOrders(options?: ApiOrderOptions | undefined): Promise<SignedOrder[]> {
     // this.saveSnapshot();
-    const orders = this.orderbookToArray().filter(x => x.state === OrderState.OPEN);
-    return orders;
+    // const orders = this.orderbookToArray().filter(x => x.state === OrderState.OPEN);
+    // return orders;
+    throw new Error('Method not implemented.');
   }
 
   getTokenPairs(): Promise<Array<TokenPair>> {
     throw new Error('Method not implemented.');
   }
 
-  async getOrder(orderHash: string): Promise<OrderbookOrder | undefined> {
-    return this.db.orderbook.get(orderHash);
+  async getOrder(orderHash: string): Promise<SignedOrder> {
+    throw new Error('Method not implemented.');
+    // return this.db.orderbook.get(orderHash);
   }
 
   getFees(feePayload: FeeApiRequest): Promise<FeeApiResponse> {

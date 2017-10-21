@@ -1,6 +1,7 @@
 CREATE TABLE "public"."tokens" (
     "address" text,
-    "alias" text,
+    "symbol" text,
+    "name" text,
     "min_amount" text,
     "max_amount" text,
     "precision" int,
