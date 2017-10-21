@@ -10,6 +10,7 @@ import { mapSignedOrderToOrderApiPayload } from './adapter';
 import {
   OrderApiPayload,
   ApiOrderOptions,
+  ApiOrderbookOptions,
   FeeApiRequest,
   FeeApiResponse,
   PaginationParams,
@@ -30,6 +31,26 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   router.get('/tokens', async (req, res) => {
     const tokens = await zeroEx.tokenRegistry.getTokensAsync();
     res.status(201).json(tokens);
+  });
+
+  router.get('/orderbook', async (req, res, next) => {
+    const { baseTokenAddress, quoteTokenAddress }: ApiOrderbookOptions = req.query;
+    if (!baseTokenAddress) {
+      res.status(400);
+      return next({ errorMessage: 'baseTokenAddress missing' });
+    }
+    if (!quoteTokenAddress) {
+      res.status(400);
+      return next({ errorMessage: 'quoteTokenAddress missing' });
+    }
+    // const orderbookRequested = await orderbook.getOrderbook({
+    //   baseTokenAddress,
+    //   quoteTokenAddress,
+    // });
+    // const orders = await orderbook.getOrders(options);
+    // const apiFormattedOrders = orders.map(mapSignedOrderToOrderApiPayload);
+    // res.status(201).json(orders);
+    throw new Error('Not yet implemented');
   });
 
   router.get('/orders', async (req, res) => {

@@ -43,6 +43,11 @@ export interface FeeApiResponse {
   takerFee: string;
 }
 
+export interface ApiOrderbookOptions {
+  baseTokenAddress: string;
+  quoteTokenAddress: string;
+}
+
 export interface ApiOrderOptions extends PaginationParams {
   ascByBaseToken?: string;
   exchangeContractAddress?: string;
