@@ -8,21 +8,28 @@
   dependencies:
     jsonschema "^1.2.0"
 
-"0x.js@^0.21.4":
-  version "0.21.4"
-  resolved "https://registry.yarnpkg.com/0x.js/-/0x.js-0.21.4.tgz#dab2fda39cc150d95d4eaba607b9f77ed15a3d47"
+"0x-json-schemas@^0.6.5":
+  version "0.6.5"
+  resolved "https://registry.yarnpkg.com/0x-json-schemas/-/0x-json-schemas-0.6.5.tgz#d67d4afbb69780fa59090b0a9feb744aebfc73ff"
   dependencies:
-    "0x-json-schemas" "^0.6.1"
+    jsonschema "^1.2.0"
+    lodash.values "^4.3.0"
+
+"0x.js@^0.22.1":
+  version "0.22.1"
+  resolved "https://registry.yarnpkg.com/0x.js/-/0x.js-0.22.1.tgz#c5e5ab9fe36aa8002cecc9abb07a83f60f84a176"
+  dependencies:
+    "0x-json-schemas" "^0.6.5"
     "@types/bignumber.js" "^4.0.2"
     bignumber.js "^4.0.2"
     compare-versions "^3.0.1"
     es6-promisify "^5.0.0"
     ethereumjs-abi "^0.6.4"
-    ethereumjs-blockstream "^2.0.6"
+    ethereumjs-blockstream "^2.0.7"
     ethereumjs-util "^5.1.1"
     find-versions "^2.0.0"
     js-sha3 "^0.6.1"
-    lodash "^4.17.4"
+    lodash-es "^4.17.4"
     publish-release "^1.3.3"
     uuid "^3.1.0"
     web3 "^0.20.0"
@@ -1477,14 +1484,7 @@ ethereum-common@^0.0.18:
   version "0.0.18"
   resolved "https://registry.yarnpkg.com/ethereum-common/-/ethereum-common-0.0.18.tgz#2fdc3576f232903358976eb39da783213ff9523f"
 
-ethereumjs-abi@^0.6.4:
-  version "0.6.4"
-  resolved "https://registry.yarnpkg.com/ethereumjs-abi/-/ethereumjs-abi-0.6.4.tgz#9ba1bb056492d00c27279f6eccd4d58275912c1a"
-  dependencies:
-    bn.js "^4.10.0"
-    ethereumjs-util "^4.3.0"
-
-"ethereumjs-abi@git+https://github.com/ethereumjs/ethereumjs-abi.git":
+ethereumjs-abi@^0.6.4, "ethereumjs-abi@git+https://github.com/ethereumjs/ethereumjs-abi.git":
   version "0.6.4"
   resolved "git+https://github.com/ethereumjs/ethereumjs-abi.git#ee6ded67235a98f3ef4ae2a338aee70a9f68fe20"
   dependencies:
@@ -1508,7 +1508,7 @@ ethereumjs-block@^1.2.2, ethereumjs-block@~1.7.0:
     ethereumjs-util "^5.0.0"
     merkle-patricia-tree "^2.1.2"
 
-ethereumjs-blockstream@^2.0.6:
+ethereumjs-blockstream@^2.0.7:
   version "2.0.7"
   resolved "https://registry.yarnpkg.com/ethereumjs-blockstream/-/ethereumjs-blockstream-2.0.7.tgz#8e791d18d517f13e0ba928892dda545dc930936b"
   dependencies:
@@ -2931,6 +2931,10 @@ locate-path@^2.0.0:
     p-locate "^2.0.0"
     path-exists "^3.0.0"
 
+lodash-es@^4.17.4:
+  version "4.17.4"
+  resolved "https://registry.yarnpkg.com/lodash-es/-/lodash-es-4.17.4.tgz#dcc1d7552e150a0640073ba9cb31d70f032950e7"
+
 lodash.assign@^4.0.3, lodash.assign@^4.0.6:
   version "4.2.0"
   resolved "https://registry.yarnpkg.com/lodash.assign/-/lodash.assign-4.2.0.tgz#0d99f3ccd7a6d261d19bdaeb9245005d285808e7"
@@ -2938,6 +2942,10 @@ lodash.assign@^4.0.3, lodash.assign@^4.0.6:
 lodash.reduce@4.6.0:
   version "4.6.0"
   resolved "https://registry.yarnpkg.com/lodash.reduce/-/lodash.reduce-4.6.0.tgz#f1ab6b839299ad48f784abbf476596f03b914d3b"
+
+lodash.values@^4.3.0:
+  version "4.3.0"
+  resolved "https://registry.yarnpkg.com/lodash.values/-/lodash.values-4.3.0.tgz#a3a6c2b0ebecc5c2cba1c17e6e620fe81b53d347"
 
 lodash@^3.3.1, lodash@^3.6.0:
   version "3.10.1"
@@ -3729,18 +3737,9 @@ read@~1.0.5:
   dependencies:
     mute-stream "~0.0.4"
 
-"readable-stream@>=1.0.33-1 <1.1.0-0", readable-stream@~1.0.15, readable-stream@~1.0.26:
+"readable-stream@>=1.0.33-1 <1.1.0-0", readable-stream@^1.0.33, readable-stream@~1.0.15, readable-stream@~1.0.26:
   version "1.0.34"
   resolved "https://registry.yarnpkg.com/readable-stream/-/readable-stream-1.0.34.tgz#125820e34bc842d2f2aaafafe4c2916ee32c157c"
-  dependencies:
-    core-util-is "~1.0.0"
-    inherits "~2.0.1"
-    isarray "0.0.1"
-    string_decoder "~0.10.x"
-
-readable-stream@^1.0.33, readable-stream@~1.1.9:
-  version "1.1.14"
-  resolved "https://registry.yarnpkg.com/readable-stream/-/readable-stream-1.1.14.tgz#7cf4c54ef648e3813084c636dd2079e166c081d9"
   dependencies:
     core-util-is "~1.0.0"
     inherits "~2.0.1"
@@ -3758,6 +3757,15 @@ readable-stream@^2.0.0, readable-stream@^2.0.5, readable-stream@^2.0.6, readable
     safe-buffer "~5.1.1"
     string_decoder "~1.0.3"
     util-deprecate "~1.0.1"
+
+readable-stream@~1.1.9:
+  version "1.1.14"
+  resolved "https://registry.yarnpkg.com/readable-stream/-/readable-stream-1.1.14.tgz#7cf4c54ef648e3813084c636dd2079e166c081d9"
+  dependencies:
+    core-util-is "~1.0.0"
+    inherits "~2.0.1"
+    isarray "0.0.1"
+    string_decoder "~0.10.x"
 
 readline2@^0.1.1:
   version "0.1.1"

@@ -20,15 +20,6 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   router.use(bodyParser.json({ type: '*/*' }));
   router.use(bodyParser.urlencoded({ extended: true }));
 
-  // [
-  //   [
-  //     "Address1",
-  //     "Address2",
-  //   ],
-  //   [
-  //     ...
-  //   ]
-  // ]
   router.get('/token_pairs', async (req, res) => {
     const { page, per_page }: PaginationParams = req.query;
     const pairs = await orderbook.getTokenPairs();
@@ -74,64 +65,63 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
 
   router.post('/order', async (req, res, next) => {
     logger.log('debug', 'Order endpoint hit, order verifying...');
-    const x = await orderbook.postOrder('', {} as any);
-    // const { body } = req;
-    // const payload = body as OrderApiPayload;
-    // const possibleOrder = payload.signedOrder;
+    const { body } = req;
+    const payload = body as OrderApiPayload;
+    const possibleOrder = payload.signedOrder;
 
-    // if (!possibleOrder.taker || possibleOrder.taker === '') {
-    //   // schema requires a taker, so if null/emptystring we assign empty hex
-    //   const EMPTY_TAKER_ADDRESS = '0x0000000000000000000000000000000000000000';
-    //   possibleOrder.taker = EMPTY_TAKER_ADDRESS;
-    // }
+    if (!possibleOrder.taker || possibleOrder.taker === '') {
+      // schema requires a taker, so if null/emptystring we assign empty hex
+      const EMPTY_TAKER_ADDRESS = '0x0000000000000000000000000000000000000000';
+      possibleOrder.taker = EMPTY_TAKER_ADDRESS;
+    }
 
-    // const validationInfo = validateEndpointSignedOrderBySchema(possibleOrder);
-    // if (!validationInfo.valid) {
-    //   logger.log('debug', 'Order validation failed');
-    //   const e = {
-    //     code: 101,
-    //     status: 400,
-    //     message: `Validation failed`,
-    //     validationErrors: validationInfo.errors,
-    //   };
-    //   return next(e);
-    // }
+    const validationInfo = validateEndpointSignedOrderBySchema(possibleOrder);
+    if (!validationInfo.valid) {
+      logger.log('debug', 'Order validation failed');
+      const e = {
+        code: 101,
+        status: 400,
+        message: `Validation failed`,
+        validationErrors: validationInfo.errors,
+      };
+      return next(e);
+    }
 
-    // // 0x must have a weird BigNumber setup, getting type errors only on that library. Need to cast
-    // const signedOrder = mapOrderApiPayloadToSignedOrder(payload);
-    // const zeroExSignedOrder = signedOrder as ZeroExSignedOrder;
+    // 0x must have a weird BigNumber setup, getting type errors only on that library. Need to cast
+    const signedOrder = mapOrderApiPayloadToSignedOrder(payload);
+    const zeroExSignedOrder = signedOrder as ZeroExSignedOrder;
 
-    // const orderHash = await ZeroEx.getOrderHashHex(zeroExSignedOrder);
-    // logger.log('debug', `Order hash: ${orderHash}`);
+    const orderHash = await ZeroEx.getOrderHashHex(zeroExSignedOrder);
+    logger.log('debug', `Order hash: ${orderHash}`);
 
-    // try {
-    //   await zeroEx.exchange.validateOrderFillableOrThrowAsync(zeroExSignedOrder);
-    //   logger.log('debug', `Order ${orderHash} fillable`);
-    // } catch (err) {
-    //   logger.log('debug', `Order ${orderHash} is not fillable`);
-    //   const e = {
-    //     code: 100,
-    //     message: 'Order not fillable',
-    //   };
-    //   return next(e);
-    // }
+    try {
+      await zeroEx.exchange.validateOrderFillableOrThrowAsync(zeroExSignedOrder);
+      logger.log('debug', `Order ${orderHash} fillable`);
+    } catch (err) {
+      logger.log('debug', `Order ${orderHash} is not fillable`);
+      const e = {
+        code: 100,
+        message: 'Order not fillable',
+      };
+      return next(e);
+    }
 
-    // const isValidSig = await ZeroEx.isValidSignature(
-    //   orderHash,
-    //   possibleOrder.ecSignature,
-    //   possibleOrder.maker
-    // );
-    // if (!isValidSig) {
-    //   logger.log('debug', `Invalid signature for order: ${orderHash}`);
-    //   const e = {
-    //     code: 1005,
-    //     message: 'Invalid signature',
-    //   };
-    //   return next(e);
-    // }
+    const isValidSig = await ZeroEx.isValidSignature(
+      orderHash,
+      possibleOrder.ecSignature,
+      possibleOrder.maker
+    );
+    if (!isValidSig) {
+      logger.log('debug', `Invalid signature for order: ${orderHash}`);
+      const e = {
+        code: 1005,
+        message: 'Invalid signature',
+      };
+      return next(e);
+    }
 
-    // logger.log('info', `Order ${orderHash} passed validation, adding to orderbook`);
-    // const didAddOrder = await orderbook.postOrder(orderHash, signedOrder);
+    logger.log('info', `Order ${orderHash} passed validation, adding to orderbook`);
+    const didAddOrder = await orderbook.postOrder(orderHash, signedOrder);
     res.sendStatus(201);
   });
   return router;

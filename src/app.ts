@@ -40,12 +40,14 @@ const createApp = async () => {
   const BLOCKCHAIN_STARTING_BLOCK = config.BLOCKCHAIN_STARTING_BLOCK;
   const ZEROEX_EXCHANGE_SOL_ADDRESS = config.ZERO_EX_EXCHANGE_SOL_ADDRESS;
 
+  logger.log('info', 'Conduit starting...');
   const providerEngine = new ProviderEngine();
   providerEngine.addProvider(new FilterSubprovider());
   providerEngine.addProvider(new RpcSubprovider({ rpcUrl: BLOCKCHAIN_NETWORK_ENDPOINT }));
   providerEngine.start();
 
   const zeroEx = new ZeroEx(providerEngine);
+
   const orderbook = await orderbookFactory({ config, zeroEx, logger });
 
   const app = express();

@@ -1,6 +1,9 @@
 import createApp from './app';
 import config from './config';
+import { ConsoleLoggerFactory, Logger } from './util/logger';
+
 const PORT = config.PORT;
+const logger = ConsoleLoggerFactory({ level: config.LOG_LEVEL });
 
 const setupProcessCleanup = () => {
   process.on('exit', () => {
@@ -23,7 +26,7 @@ const setupProcessCleanup = () => {
 const start = async () => {
   try {
     const app = await createApp();
-    app.listen(PORT), () => console.log(`Running on port ${PORT}`);
+    app.listen(PORT), logger.log('info', `Conduit started on port ${PORT}`);
   } catch (e) {
     console.error('Error starting app', e);
   }
