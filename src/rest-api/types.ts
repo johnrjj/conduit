@@ -59,6 +59,10 @@ export interface ApiOrderOptions extends PaginationParams {
   feeRecipient?: string;
 }
 
+export interface TokenPair {
+  [token: string]: TokenInfo;
+}
+
 export interface TokenInfo {
   address: string;
   symbol: string;

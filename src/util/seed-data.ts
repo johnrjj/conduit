@@ -13,6 +13,7 @@ const generateInMemoryDbFromJson = (zeroEx: ZeroEx): InMemoryDatabase => {
     order.signedOrder = signedOrder;
     const orderHash: string = ZeroEx.getOrderHashHex(signedOrder as ZeroExSignedOrder);
     orderbook.set(orderHash, order);
+    console.log(orderHash);
     return orderbook;
   }, new Map<string, OrderbookOrder>());
   const db: InMemoryDatabase = {

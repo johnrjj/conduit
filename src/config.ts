@@ -14,6 +14,7 @@ export interface AppConfig {
   PGPORT?: number;
   PG_ORDERS_TABLE_NAME?: string;
   PG_TOKENS_TABLE_NAME?: string;
+  PG_TOKEN_PAIRS_TABLE_NAME?: string;
   PG_APP_TABLE_NAME?: string;
 }
 
@@ -34,6 +35,7 @@ const config: AppConfig = {
   PGPORT: parseInt(process.env.PGPORT || '', 10) || 5432,
   PG_ORDERS_TABLE_NAME: 'orders',
   PG_TOKENS_TABLE_NAME: 'tokens',
+  PG_TOKEN_PAIRS_TABLE_NAME: 'token_pairs',
   PG_APP_TABLE_NAME: 'app',
 };
 

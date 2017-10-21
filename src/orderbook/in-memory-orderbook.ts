@@ -3,7 +3,7 @@ import { Duplex } from 'stream';
 import { writeFileSync } from 'fs';
 import { ZeroEx } from '0x.js';
 import { Orderbook } from './orderbook';
-import { FeeApiRequest, FeeApiResponse, ApiOrderOptions } from '../rest-api/types';
+import { FeeApiRequest, FeeApiResponse, ApiOrderOptions, TokenPair } from '../rest-api/types';
 import {
   OrderbookOrder,
   OrderState,
@@ -84,7 +84,7 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     return orders;
   }
 
-  getTokenPairs(): Promise<Array<Array<string>>> {
+  getTokenPairs(): Promise<Array<TokenPair>> {
     throw new Error('Method not implemented.');
   }
 

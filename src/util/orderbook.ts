@@ -5,8 +5,8 @@ import { Logger } from './logger';
 import { Orderbook, PostgresOrderbook, InMemoryOrderbook } from '../orderbook';
 import { AppConfig } from '../config';
 
-// definitely refactor this, super ugly
-const orderbookFactory = ({
+// definitely refactor this asap...
+const orderbookFactory = async ({
   config,
   logger,
   zeroEx,
@@ -14,7 +14,7 @@ const orderbookFactory = ({
   config: AppConfig;
   logger: Logger;
   zeroEx: ZeroEx;
-}): Orderbook => {
+}): Promise<Orderbook> => {
   let orderbook: Orderbook;
   if (config.DATA_STORE === 'postgres') {
     try {
@@ -32,20 +32,25 @@ const orderbookFactory = ({
           port: config.PGPORT,
         });
       }
-      logger.log('debug', `Connecting to Postres Database`);
       orderbook = new PostgresOrderbook({
         postgresPool: pool || '',
         orderTableName: config.PG_ORDERS_TABLE_NAME || '',
         tokenTableName: config.PG_TOKENS_TABLE_NAME || '',
+        tokenPairTableName: config.PG_TOKEN_PAIRS_TABLE_NAME || '',
         logger,
       });
+      await pool.connect();
+      logger.log('info', `Connected to Postres Database`);
     } catch (e) {
       logger.log('error', 'Error connecting to Postgres', e);
-      throw e;
+      logger.log('debug', `Gracefully degrading into In-Memory Database`);
+      const initialDb = generateInMemoryDbFromJson(zeroEx);
+      orderbook = new InMemoryOrderbook({ zeroEx, logger, initialDb });
+      logger.log('info', 'Connected to In-Memory Database');
     }
   } else {
     logger.log('debug', 'No data store specified, falling back to in-memory');
-    logger.log('debug', `Creating In-Memory Database`);
+    logger.log('info', `Creating In-Memory Database`);
     const initialDb = generateInMemoryDbFromJson(zeroEx);
     orderbook = new InMemoryOrderbook({ zeroEx, logger, initialDb });
   }
