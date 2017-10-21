@@ -43,6 +43,7 @@
     "@types/helmet": "^0.0.36",
     "@types/jest": "^21.1.2",
     "@types/morgan": "^1.7.33",
+    "@types/node": "^8.0.46",
     "@types/pg": "^7.1.4",
     "@types/socket.io": "^1.4.31",
     "@types/sqlite3": "^3.1.1",
