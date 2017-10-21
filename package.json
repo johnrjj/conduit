@@ -31,7 +31,6 @@
     "pg": "^7.3.0",
     "sql-template-strings": "^2.2.2",
     "sqlite3": "^3.1.13",
-    "typescript": "^2.5.3",
     "web3-provider-engine": "^13.3.2",
     "winston": "^2.4.0",
     "ws": "^3.2.0"
@@ -54,6 +53,7 @@
     "ts-jest": "^21.1.2",
     "tslint": "^5.7.0",
     "tslint-config-0xproject": "^0.0.2",
+    "typescript": "^2.5.3",
     "web3-typescript-typings": "^0.6.2"
   },
   "engines": {
