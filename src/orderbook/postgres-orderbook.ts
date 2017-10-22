@@ -14,7 +14,6 @@ import {
   OrderFillMessage,
   BlockchainLogEvent,
 } from '../types/core';
-import { EventTypes } from '../types/events';
 import { Logger } from '../util/logger';
 
 export interface PostgresOrderbookOptions {
@@ -65,6 +64,10 @@ export class PostgresOrderbook extends Duplex implements Orderbook {
     this.tokenPairsTableName = 'token_pairs';
     this.logger = logger;
 
+    this.validatePostgresInstance();
+  }
+
+  private validatePostgresInstance() {
     this.pool
       .query(SQL`select to_regclass(${this.orderTableName})`)
       .then(res => !res.rows[0].to_regclass && this.log('debug', 'Orders table does not exist'))
@@ -146,13 +149,16 @@ export class PostgresOrderbook extends Duplex implements Orderbook {
     return formattedOrders;
   }
 
-  async getOrder(orderHash: string): Promise<SignedOrder> {
+  async getOrder(orderHash: string): Promise<SignedOrder | null> {
     const res = await this.pool.query(SQL`
       select * 
       from orders
       where order_hash = ${orderHash}
     `);
-    console.log(res.rows[0]);
+    if (res.rows.length === 0) {
+      this.log('debug', `No order ${orderHash} found in database`);
+      return null;
+    }
     const formattedOrder = this.formatOrderFromDb(res.rows[0]);
     return formattedOrder;
   }
@@ -166,21 +172,21 @@ export class PostgresOrderbook extends Duplex implements Orderbook {
     return freeFee;
   }
 
-  async postOrder(orderHash: string, signedOrder: SignedOrder): Promise<boolean> {
+  async postOrder(orderHash: string, signedOrder: SignedOrder): Promise<void> {
     try {
       const res = await this.pool.query(SQL`INSERT INTO 
       "orders"(
-        "exchangeContractAddress", 
+        "exchange_contract_address", 
         "maker", 
         "taker", 
-        "makerTokenAddress", 
-        "takerTokenAddress", 
-        "feeRecipient", 
-        "makerTokenAmount", 
-        "takerTokenAmount", 
-        "makerFee",
-        "takerFee", 
-        "expirationUnixTimestampSec", 
+        "maker_token_address", 
+        "taker_token_address", 
+        "fee_recipient", 
+        "maker_token_amount", 
+        "taker_token_amount", 
+        "maker_fee",
+        "taker_fee", 
+        "expiration_unix_timestamp_sec", 
         "salt", 
         "ec_sig_v", 
         "ec_sig_r", 
@@ -194,19 +200,18 @@ export class PostgresOrderbook extends Duplex implements Orderbook {
         ${signedOrder.makerTokenAddress}, 
         ${signedOrder.takerTokenAddress}, 
         ${signedOrder.feeRecipient}, 
-        ${signedOrder.makerTokenAmount}, 
-        ${signedOrder.takerTokenAmount}, 
-        ${signedOrder.makerFee}, 
-        ${signedOrder.takerFee}, 
-        ${signedOrder.expirationUnixTimestampSec}, 
-        ${signedOrder.salt}, 
+        ${signedOrder.makerTokenAmount.toString()}, 
+        ${signedOrder.takerTokenAmount.toString()}, 
+        ${signedOrder.makerFee.toString()}, 
+        ${signedOrder.takerFee.toString()}, 
+        ${signedOrder.expirationUnixTimestampSec.toString()}, 
+        ${signedOrder.salt.toString()}, 
         ${signedOrder.ecSignature.v}, 
         ${signedOrder.ecSignature.r}, 
         ${signedOrder.ecSignature.s},
         ${orderHash}
       ) 
       `);
-      return true;
     } catch (err) {
       this.log('error', `Error inserting order ${orderHash} into postgres.`, err);
       throw err;

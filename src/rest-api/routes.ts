@@ -3,17 +3,17 @@ import { Router } from 'express';
 import { ZeroEx, Token, SignedOrder as ZeroExSignedOrder } from '0x.js';
 import { validateEndpointSignedOrderBySchema } from '../util/validate';
 import { pairTokens } from '../util/token';
-import { mapOrderApiPayloadToSignedOrder } from './adapter';
+import { mapOrderApiPayloadToSignedOrder, mapZeroExPortalOrderJSONToSignedOrder } from './adapter';
 import { Logger } from '../util/logger';
 import { Orderbook } from '../orderbook';
-import { mapSignedOrderToOrderApiPayload } from './adapter';
 import {
-  OrderApiPayload,
+  OrderPayload,
   ApiOrderOptions,
   ApiOrderbookOptions,
   FeeApiRequest,
   FeeApiResponse,
   PaginationParams,
+  ZeroExPortalOrderJSON,
 } from './types';
 
 const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
@@ -25,12 +25,6 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
     const { page, per_page }: PaginationParams = req.query;
     const pairs = await orderbook.getTokenPairs();
     res.status(201).json(pairs);
-  });
-
-  // deprecated, still keeping it serving direct from zeroex token registry
-  router.get('/tokens', async (req, res) => {
-    const tokens = await zeroEx.tokenRegistry.getTokensAsync();
-    res.status(201).json(tokens);
   });
 
   router.get('/orderbook', async (req, res, next) => {
@@ -56,7 +50,6 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   router.get('/orders', async (req, res) => {
     const options: ApiOrderOptions = req.query;
     const orders = await orderbook.getOrders(options);
-    // const apiFormattedOrders = orders.map(mapSignedOrderToOrderApiPayload);
     res.status(201).json(orders);
   });
 
@@ -66,7 +59,6 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
     if (!order) {
       return res.sendStatus(404);
     }
-    // const apiFormattedOrder = mapSignedOrderToOrderApiPayload(order);
     res.json(order);
   });
 
@@ -85,11 +77,11 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
   router.post('/order', async (req, res, next) => {
     logger.log('debug', 'Order endpoint hit, order verifying...');
     const { body } = req;
-    const payload = body as OrderApiPayload;
-    const possibleOrder = payload.signedOrder;
+    const possibleOrder = body as OrderPayload;
 
-    if (!possibleOrder.taker || possibleOrder.taker === '') {
+    if (possibleOrder.taker === '') {
       // schema requires a taker, so if null/emptystring we assign empty hex
+      logger.log('debug', 'Order taker adress empty, assigning empty hex address');
       const EMPTY_TAKER_ADDRESS = '0x0000000000000000000000000000000000000000';
       possibleOrder.taker = EMPTY_TAKER_ADDRESS;
     }
@@ -106,15 +98,12 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
       return next(e);
     }
 
-    // 0x must have a weird BigNumber setup, getting type errors only on that library. Need to cast
-    const signedOrder = mapOrderApiPayloadToSignedOrder(payload);
-    const zeroExSignedOrder = signedOrder as ZeroExSignedOrder;
-
-    const orderHash = await ZeroEx.getOrderHashHex(zeroExSignedOrder);
+    const signedOrder = mapOrderApiPayloadToSignedOrder(possibleOrder);
+    const orderHash = await ZeroEx.getOrderHashHex(signedOrder);
     logger.log('debug', `Order hash: ${orderHash}`);
 
     try {
-      await zeroEx.exchange.validateOrderFillableOrThrowAsync(zeroExSignedOrder);
+      await zeroEx.exchange.validateOrderFillableOrThrowAsync(signedOrder);
       logger.log('debug', `Order ${orderHash} fillable`);
     } catch (err) {
       logger.log('debug', `Order ${orderHash} is not fillable`);
@@ -139,10 +128,44 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
       return next(e);
     }
 
-    logger.log('info', `Order ${orderHash} passed validation, adding to orderbook`);
-    const didAddOrder = await orderbook.postOrder(orderHash, signedOrder);
-    res.sendStatus(201);
+    logger.log('info', `Order ${orderHash} passed validation, adding to database`);
+    try {
+      const didAddOrder = await orderbook.postOrder(orderHash, signedOrder);
+      logger.log('info', `Added order ${orderHash} to database successfully`);
+      res.sendStatus(201);
+    } catch (e) {
+      logger.log('error', `Error adding order ${orderHash} to database`, e);
+      res.sendStatus(500);
+    }
   });
+
+  /**
+   * @deprecated experimental for testing only, no validation included.
+   */
+  router.post('/zeroex-portal-order', async (req, res, next) => {
+    logger.log('debug', 'ZeroEx Portal Order Converter hit, adding order');
+    const { body } = req;
+    const payload = body as ZeroExPortalOrderJSON;
+    const signedOrder = mapZeroExPortalOrderJSONToSignedOrder(payload);
+    const orderHash = await ZeroEx.getOrderHashHex(signedOrder);
+    try {
+      await orderbook.postOrder(orderHash, signedOrder);
+      logger.log('info', `Added order ${orderHash} to database successfully`);
+      res.sendStatus(201);
+    } catch (e) {
+      logger.log('error', 'Error adding ZeroEx Portal Order to database', e);
+      res.sendStatus(500);
+    }
+  });
+
+  /**
+   * @deprecated
+   */
+  router.get('/tokens', async (req, res) => {
+    const tokens = await zeroEx.tokenRegistry.getTokensAsync();
+    res.status(201).json(tokens);
+  });
+
   return router;
 };
 

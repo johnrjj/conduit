@@ -2,18 +2,18 @@
   "name": "0x-relayer-api",
   "version": "0.0.1",
   "description": "0x relayer api",
-  "main": "index.js",
+  "main": "dist/index.js",
   "author": "john johnson",
   "license": "MIT",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index",
-    "dev": "tsc && node dist/index",
-    "now-start": "node dist/index",
-    "postinstall": "npm run build",
-    "deploy": "now && now alias && now 0x-relayer-api --safe ",
+    "dev": "ts-node --inspect src/index",
     "test": "jest",
-    "prettier": "prettier --single-quote --print-width 100 --trailing-comma es5 --write 'src/**/*.ts'"
+    "prettier": "prettier --single-quote --print-width 100 --trailing-comma es5 --write 'src/**/*.ts'",
+    "deploy": "now && now alias && now 0x-relayer-api --safe ",
+    "now-start": "node dist/index",
+    "heroku-postbuild": "npm run build"
   },
   "dependencies": {
     "0x-json-schemas": "^0.6.5",
@@ -51,6 +51,7 @@
     "jest": "^21.2.1",
     "prettier": "^1.7.4",
     "ts-jest": "^21.1.2",
+    "ts-node": "^3.3.0",
     "tslint": "^5.7.0",
     "tslint-config-0xproject": "^0.0.2",
     "typescript": "^2.5.3",

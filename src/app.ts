@@ -20,7 +20,6 @@ import v0ApiRouteFactory from './rest-api/routes';
 import { WebSocketNode } from './ws-api/websocket-node';
 import { Orderbook, PostgresOrderbook, InMemoryOrderbook } from './orderbook';
 import { RoutingError, BlockchainLogEvent, OrderbookOrder } from './types/core';
-import { ConduitOrderAddEvent, ConduitOrderUpdateEvent, EventTypes } from './types/events';
 import { Readable, PassThrough } from 'stream';
 import { serializeOrderbookOrder } from './util/order';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
@@ -107,8 +106,8 @@ const createApp = async () => {
   zeroExStreamWrapper.pipe(orderbook);
 
   // Now we can subscribe to the (standardized) orderbook stream for relevant events
-  orderbook.on(EventTypes.CONDUIT_ORDER_ADD, (order: OrderbookOrder) => {});
-  orderbook.on(EventTypes.CONDUIT_ORDER_UPDATE, (order: OrderbookOrder) => {});
+  // orderbook.on(EventTypes.CONDUIT_ORDER_ADD, (order: OrderbookOrder) => {});
+  // orderbook.on(EventTypes.CONDUIT_ORDER_UPDATE, (order: OrderbookOrder) => {});
 
   return app;
 };

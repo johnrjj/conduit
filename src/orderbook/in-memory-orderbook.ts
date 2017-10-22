@@ -13,7 +13,6 @@ import {
   OrderFillMessage,
   BlockchainLogEvent,
 } from '../types/core';
-import { EventTypes } from '../types/events';
 import { Logger } from '../util/logger';
 
 export interface InMemoryDatabase {
@@ -74,7 +73,7 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     };
 
     this.db.orderbook.set(orderHash, fullOrder);
-    this.emit(EventTypes.CONDUIT_ORDER_ADD, fullOrder);
+    // this.emit(EventTypes.CONDUIT_ORDER_ADD, fullOrder);
     return true;
   }
 
@@ -118,7 +117,7 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
         );
         break;
       default:
-        this.emit(EventTypes.CONDUIT_UNKNOWN, msg);
+        // this.emit(EventTypes.CONDUIT_UNKNOWN, msg);
         break;
     }
     callback();
@@ -180,7 +179,7 @@ export class InMemoryOrderbook extends Duplex implements Orderbook {
     };
     this.updateOrderbook(orderHash, updatedOrder);
 
-    this.emit(EventTypes.CONDUIT_ORDER_UPDATE, updatedOrder);
+    // this.emit(EventTypes.CONDUIT_ORDER_UPDATE, updatedOrder);
   }
 
   private orderbookToArray() {

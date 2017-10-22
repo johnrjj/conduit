@@ -1,20 +1,12 @@
 import { BigNumber } from 'bignumber.js';
 import { ZeroEx, SignedOrder as ZeroExSignedOrder } from '0x.js';
 import { OrderbookOrder, SignedOrder } from '../types/core';
-import { OrderApiPayload } from './types';
+import { OrderPayload, ZeroExPortalOrderJSON } from './types';
 import { serializeSignedOrder } from '../util/order';
 
-const mapSignedOrderToOrderApiPayload = (o: OrderbookOrder): OrderApiPayload => {
-  const { signedOrder } = o;
-  const mapped = {
-    signedOrder: serializeSignedOrder(signedOrder),
-  };
-  return mapped;
-};
-
-const mapOrderApiPayloadToSignedOrder = (payload: OrderApiPayload): SignedOrder => {
-  const order = payload.signedOrder;
-  const parsedOrder = {
+const mapOrderApiPayloadToSignedOrder = (payload: OrderPayload): SignedOrder => {
+  const order = payload;
+  const parsedOrder: SignedOrder = {
     maker: order.maker,
     taker: order.taker,
     makerFee: new BigNumber(order.makerFee),
@@ -32,4 +24,28 @@ const mapOrderApiPayloadToSignedOrder = (payload: OrderApiPayload): SignedOrder 
   return parsedOrder;
 };
 
-export { serializeSignedOrder, mapSignedOrderToOrderApiPayload, mapOrderApiPayloadToSignedOrder };
+const mapZeroExPortalOrderJSONToSignedOrder = (payload: ZeroExPortalOrderJSON): SignedOrder => {
+  const order = payload;
+  const parsedOrder: SignedOrder = {
+    maker: order.maker.address,
+    taker: order.taker.address,
+    makerFee: new BigNumber(order.maker.feeAmount),
+    takerFee: new BigNumber(order.taker.feeAmount),
+    makerTokenAmount: new BigNumber(order.maker.amount),
+    makerTokenAddress: order.maker.token.address,
+    takerTokenAmount: new BigNumber(order.taker.amount),
+    takerTokenAddress: order.taker.token.address,
+    salt: new BigNumber(order.salt),
+    exchangeContractAddress: order.exchangeContract,
+    feeRecipient: order.feeRecipient,
+    expirationUnixTimestampSec: new BigNumber(order.expiration),
+    ecSignature: {
+      r: order.signature.r,
+      s: order.signature.s,
+      v: order.signature.v,
+    },
+  };
+  return parsedOrder;
+};
+
+export { mapOrderApiPayloadToSignedOrder, mapZeroExPortalOrderJSONToSignedOrder };
