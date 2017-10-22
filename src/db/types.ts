@@ -1,6 +1,6 @@
 import { Duplex } from 'stream';
 import { FeeApiRequest, FeeApiResponse, ApiOrderOptions, TokenPair } from '../rest-api/types';
-import { OrderbookOrder, SignedOrder } from '../types/core';
+import { OrderbookOrder, OrderbookPair, SignedOrder } from '../types/core';
 
 interface RelayDatabase {
   getTokenPairs(): Promise<Array<TokenPair>>;
@@ -8,6 +8,7 @@ interface RelayDatabase {
   getOrder(orderHash: string): Promise<SignedOrder | null>;
   getFees(feePayload: FeeApiRequest): Promise<FeeApiResponse>;
   postOrder(orderHash: string, signedOrder: SignedOrder): Promise<void>;
+  getOrderbook(baseTokenAddress: string, quoteTokenAddress: string): Promise<OrderbookPair>;
 }
 
 export { RelayDatabase };

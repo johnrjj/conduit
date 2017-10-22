@@ -10,6 +10,7 @@ import {
   OrderState,
   SignedOrder,
   OrderHash,
+  OrderbookPair,
   OrderCancelMessage,
   OrderFillMessage,
   BlockchainLogEvent,
@@ -138,6 +139,39 @@ export class PostgresFacade extends Duplex implements RelayDatabase {
     }
     const formattedOrder = this.formatOrderFromDb(res.rows[0]);
     return formattedOrder;
+  }
+
+  async getOrderbook(baseTokenAddress, quoteTokenAddress): Promise<OrderbookPair> {
+    const bidsQueryResPromise = this.pool.query(SQL`
+      select * 
+      from orders
+      where maker_token_address = ${baseTokenAddress}
+      and taker_token_address = ${quoteTokenAddress}
+    `);
+
+    const asksQueryResPromise = this.pool.query(SQL`
+      select * 
+      from orders
+      where maker_token_address = ${quoteTokenAddress}
+      and taker_token_address = ${baseTokenAddress}
+  `);
+
+    try {
+      const bidQueryRes = await bidsQueryResPromise;
+      const asksQueryRes = await asksQueryResPromise;
+
+      const bids = bidQueryRes.rows.map(this.formatOrderFromDb);
+      const asks = asksQueryRes.rows.map(this.formatOrderFromDb);
+
+      const orderbookPair = {
+        bids,
+        asks,
+      };
+      return orderbookPair;
+    } catch (err) {
+      this.log('debug', `Error querying for bids and asks`, err);
+      throw err;
+    }
   }
 
   async getFees(feePayload: FeeApiRequest): Promise<FeeApiResponse> {

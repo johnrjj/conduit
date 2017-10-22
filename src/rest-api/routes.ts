@@ -37,14 +37,13 @@ const createRouter = (db: RelayDatabase, zeroEx: ZeroEx, logger: Logger) => {
       res.status(400);
       return next({ errorMessage: 'quoteTokenAddress missing' });
     }
-    // const orderbookRequested = await orderbook.getOrderbook({
-    //   baseTokenAddress,
-    //   quoteTokenAddress,
-    // });
-    // const orders = await orderbook.getOrders(options);
-    // const apiFormattedOrders = orders.map(mapSignedOrderToOrderApiPayload);
-    // res.status(201).json(orders);
-    throw new Error('Not yet implemented');
+    try {
+      const orderbookForTokenPair = await db.getOrderbook(baseTokenAddress, quoteTokenAddress);
+      return res.status(201).json(orderbookForTokenPair);
+    } catch (err) {
+      logger.log('error', 'Error querying for orderbook.', err);
+      res.sendStatus(500);
+    }
   });
 
   router.get('/orders', async (req, res) => {

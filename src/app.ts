@@ -22,7 +22,6 @@ import { RelayDatabase, PostgresFacade } from './db';
 import v0ApiRouteFactory from './rest-api/routes';
 import { WebSocketNode } from './ws-api/websocket-node';
 import { RoutingError, BlockchainLogEvent, OrderbookOrder } from './types/core';
-import { serializeOrderbookOrder } from './util/order';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 import config from './config';
 
@@ -83,10 +82,12 @@ const createApp = async () => {
   });
 
   app.use('/api/v0', v0ApiRouteFactory(relayDatabase, zeroEx, logger));
+  logger.log('verbose', 'Configured REST endpoints');
 
   const wss = expressWs.getWss('/ws');
   // const websocketFeed = new WebSocketFeed({ logger, wss,  });
   // (app as any).ws('/ws', (ws, req, next) => websocketFeed.acceptConnection(ws, req, next));
+  logger.log('verbose', 'Configured WebSocket endpoints');
 
   app.use((req: Request, res: Response, next: NextFunction) => {
     const err = new RoutingError('Not Found');
@@ -122,6 +123,7 @@ const createApp = async () => {
     })
     .then(cancelToken => {})
     .catch(e => logger.error(e));
+  logger.log('verbose', 'Subscribed to ZeroEx Blockchain Log events');
 
   // Feed all relevant event streams into orderbook
   // zeroExStreamWrapper.pipe(relayDatabase);
@@ -129,7 +131,6 @@ const createApp = async () => {
   // Now we can subscribe to the (standardized) orderbook stream for relevant events
   // orderbook.on(EventTypes.CONDUIT_ORDER_ADD, (order: OrderbookOrder) => {});
   // orderbook.on(EventTypes.CONDUIT_ORDER_UPDATE, (order: OrderbookOrder) => {});
-
   return app;
 };
 
