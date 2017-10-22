@@ -4,19 +4,6 @@ import { Request, NextFunction } from 'express';
 import { MessageRequest, SubscribeRequestPayload, SnapshotResponsePayload } from './types';
 import { Logger } from '../util/logger';
 
-// class Channel {
-//   private subscribers: Set<WebSocket> = new Set();
-//   private filter: (msg) => boolean = () => true;
-
-//   public removeSubscriber(ws: WebSocket) {
-//     this.subscribers.delete(ws);
-//   }
-
-//   public addSubscriber(ws: WebSocket) {
-//     this.subscribers.add(ws);
-//   }
-// }
-
 export class WebSocketNode {
   private websockets: Set<WebSocket>;
   private wsServerRef: WebSocket.Server;

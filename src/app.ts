@@ -9,6 +9,8 @@ import * as BigNumber from 'bignumber.js';
 import * as ProviderEngine from 'web3-provider-engine';
 import * as FilterSubprovider from 'web3-provider-engine/subproviders/filters';
 import * as RpcSubprovider from 'web3-provider-engine/subproviders/rpc';
+import { Pool, PoolConfig } from 'pg';
+import { Readable, PassThrough } from 'stream';
 import {
   ZeroEx,
   ExchangeEvents,
@@ -16,16 +18,12 @@ import {
   LogFillContractEventArgs,
   LogCancelContractEventArgs,
 } from '0x.js';
+import { RelayDatabase, PostgresFacade } from './db';
 import v0ApiRouteFactory from './rest-api/routes';
 import { WebSocketNode } from './ws-api/websocket-node';
-import { Orderbook, PostgresOrderbook, InMemoryOrderbook } from './orderbook';
 import { RoutingError, BlockchainLogEvent, OrderbookOrder } from './types/core';
-import { Readable, PassThrough } from 'stream';
 import { serializeOrderbookOrder } from './util/order';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
-import { generateInMemoryDbFromJson } from './util/seed-data';
-import { orderbookFactory } from './util/orderbook';
-import { Pool, PoolConfig } from 'pg';
 import config from './config';
 
 BigNumber.BigNumber.config({
@@ -47,7 +45,30 @@ const createApp = async () => {
 
   const zeroEx = new ZeroEx(providerEngine);
 
-  const orderbook = await orderbookFactory({ config, zeroEx, logger });
+  let relayDatabase: RelayDatabase;
+  try {
+    const pool = config.DATABASE_URL
+      ? new Pool({ connectionString: config.DATABASE_URL })
+      : new Pool({
+          user: config.PGUSER,
+          password: config.PGPASSWORD,
+          host: config.PGHOST,
+          database: config.PGDATABASE,
+          port: config.PGPORT,
+        });
+    relayDatabase = new PostgresFacade({
+      postgresPool: pool || '',
+      orderTableName: config.PG_ORDERS_TABLE_NAME || '',
+      tokenTableName: config.PG_TOKENS_TABLE_NAME || '',
+      tokenPairTableName: config.PG_TOKEN_PAIRS_TABLE_NAME || '',
+      logger,
+    });
+    await pool.connect();
+    logger.log('info', `Connected to Postres Database`);
+  } catch (e) {
+    logger.log('error', 'Error connecting to Postgres', e);
+    throw e;
+  }
 
   const app = express();
   const expressWs = expressWsFactory(app);
@@ -61,7 +82,7 @@ const createApp = async () => {
     res.sendStatus(200);
   });
 
-  app.use('/api/v0', v0ApiRouteFactory(orderbook, zeroEx, logger));
+  app.use('/api/v0', v0ApiRouteFactory(relayDatabase, zeroEx, logger));
 
   const wss = expressWs.getWss('/ws');
   // const websocketFeed = new WebSocketFeed({ logger, wss,  });
@@ -103,7 +124,7 @@ const createApp = async () => {
     .catch(e => logger.error(e));
 
   // Feed all relevant event streams into orderbook
-  zeroExStreamWrapper.pipe(orderbook);
+  // zeroExStreamWrapper.pipe(relayDatabase);
 
   // Now we can subscribe to the (standardized) orderbook stream for relevant events
   // orderbook.on(EventTypes.CONDUIT_ORDER_ADD, (order: OrderbookOrder) => {});

@@ -5,7 +5,7 @@ import { validateEndpointSignedOrderBySchema } from '../util/validate';
 import { pairTokens } from '../util/token';
 import { mapOrderApiPayloadToSignedOrder, mapZeroExPortalOrderJSONToSignedOrder } from './adapter';
 import { Logger } from '../util/logger';
-import { Orderbook } from '../orderbook';
+import { RelayDatabase } from '../db';
 import {
   OrderPayload,
   ApiOrderOptions,
@@ -16,14 +16,14 @@ import {
   ZeroExPortalOrderJSON,
 } from './types';
 
-const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
+const createRouter = (db: RelayDatabase, zeroEx: ZeroEx, logger: Logger) => {
   const router = Router();
   router.use(bodyParser.json({ type: '*/*' }));
   router.use(bodyParser.urlencoded({ extended: true }));
 
   router.get('/token_pairs', async (req, res) => {
     const { page, per_page }: PaginationParams = req.query;
-    const pairs = await orderbook.getTokenPairs();
+    const pairs = await db.getTokenPairs();
     res.status(201).json(pairs);
   });
 
@@ -49,13 +49,13 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
 
   router.get('/orders', async (req, res) => {
     const options: ApiOrderOptions = req.query;
-    const orders = await orderbook.getOrders(options);
+    const orders = await db.getOrders(options);
     res.status(201).json(orders);
   });
 
   router.get('/order/:orderHash', async (req, res) => {
     const { orderHash } = req.params;
-    const order = await orderbook.getOrder(orderHash);
+    const order = await db.getOrder(orderHash);
     if (!order) {
       return res.sendStatus(404);
     }
@@ -130,7 +130,7 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
 
     logger.log('info', `Order ${orderHash} passed validation, adding to database`);
     try {
-      const didAddOrder = await orderbook.postOrder(orderHash, signedOrder);
+      const didAddOrder = await db.postOrder(orderHash, signedOrder);
       logger.log('info', `Added order ${orderHash} to database successfully`);
       res.sendStatus(201);
     } catch (e) {
@@ -149,7 +149,7 @@ const createRouter = (orderbook: Orderbook, zeroEx: ZeroEx, logger: Logger) => {
     const signedOrder = mapZeroExPortalOrderJSONToSignedOrder(payload);
     const orderHash = await ZeroEx.getOrderHashHex(signedOrder);
     try {
-      await orderbook.postOrder(orderHash, signedOrder);
+      await db.postOrder(orderHash, signedOrder);
       logger.log('info', `Added order ${orderHash} to database successfully`);
       res.sendStatus(201);
     } catch (e) {

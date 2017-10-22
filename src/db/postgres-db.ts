@@ -3,7 +3,7 @@ import { Duplex } from 'stream';
 import { ZeroEx } from '0x.js';
 import { Pool } from 'pg';
 import { SQL } from 'sql-template-strings';
-import { Orderbook } from './orderbook';
+import { RelayDatabase } from './types';
 import { FeeApiRequest, FeeApiResponse, ApiOrderOptions, TokenPair } from '../rest-api/types';
 import {
   OrderbookOrder,
@@ -43,7 +43,7 @@ export interface PostgresOrderModel {
   order_hash: string;
 }
 
-export class PostgresOrderbook extends Duplex implements Orderbook {
+export class PostgresFacade extends Duplex implements RelayDatabase {
   private pool: Pool;
   private orderTableName: string;
   private tokenTableName: string;
@@ -115,29 +115,6 @@ export class PostgresOrderbook extends Duplex implements Orderbook {
       return pair;
     });
     return pairs;
-  }
-
-  private formatOrderFromDb(dbOrder: PostgresOrderModel): SignedOrder {
-    const order: SignedOrder = {
-      exchangeContractAddress: dbOrder.exchange_contract_address,
-      maker: dbOrder.maker,
-      taker: dbOrder.taker,
-      makerTokenAddress: dbOrder.maker_token_address,
-      takerTokenAddress: dbOrder.taker_token_address,
-      feeRecipient: dbOrder.fee_recipient,
-      makerTokenAmount: new BigNumber.BigNumber(dbOrder.maker_token_amount),
-      takerTokenAmount: new BigNumber.BigNumber(dbOrder.taker_token_amount),
-      makerFee: new BigNumber.BigNumber(dbOrder.maker_fee),
-      takerFee: new BigNumber.BigNumber(dbOrder.taker_fee),
-      expirationUnixTimestampSec: new BigNumber.BigNumber(dbOrder.expiration_unix_timestamp_sec),
-      salt: new BigNumber.BigNumber(dbOrder.salt),
-      ecSignature: {
-        v: parseInt(dbOrder.ec_sig_v, 10),
-        r: dbOrder.ec_sig_r,
-        s: dbOrder.ec_sig_v,
-      },
-    };
-    return order;
   }
 
   async getOrders(options?: ApiOrderOptions | undefined): Promise<SignedOrder[]> {
@@ -224,6 +201,29 @@ export class PostgresOrderbook extends Duplex implements Orderbook {
 
   _read(size: number): void {
     console.log('read postgres orderbook size:', size);
+  }
+
+  private formatOrderFromDb(dbOrder: PostgresOrderModel): SignedOrder {
+    const order: SignedOrder = {
+      exchangeContractAddress: dbOrder.exchange_contract_address,
+      maker: dbOrder.maker,
+      taker: dbOrder.taker,
+      makerTokenAddress: dbOrder.maker_token_address,
+      takerTokenAddress: dbOrder.taker_token_address,
+      feeRecipient: dbOrder.fee_recipient,
+      makerTokenAmount: new BigNumber.BigNumber(dbOrder.maker_token_amount),
+      takerTokenAmount: new BigNumber.BigNumber(dbOrder.taker_token_amount),
+      makerFee: new BigNumber.BigNumber(dbOrder.maker_fee),
+      takerFee: new BigNumber.BigNumber(dbOrder.taker_fee),
+      expirationUnixTimestampSec: new BigNumber.BigNumber(dbOrder.expiration_unix_timestamp_sec),
+      salt: new BigNumber.BigNumber(dbOrder.salt),
+      ecSignature: {
+        v: parseInt(dbOrder.ec_sig_v, 10),
+        r: dbOrder.ec_sig_r,
+        s: dbOrder.ec_sig_v,
+      },
+    };
+    return order;
   }
 
   private log(level: string, message: string, meta?: any) {
