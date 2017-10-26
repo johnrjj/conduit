@@ -1,14 +1,14 @@
 import * as express from 'express';
-import { Request, Response, NextFunction } from 'express';
 import * as expressLogger from 'morgan';
 import * as helmet from 'helmet';
 import * as cors from 'cors';
 import * as WebSocket from 'ws';
 import * as expressWsFactory from 'express-ws';
-import * as BigNumber from 'bignumber.js';
 import * as ProviderEngine from 'web3-provider-engine';
 import * as FilterSubprovider from 'web3-provider-engine/subproviders/filters';
 import * as RpcSubprovider from 'web3-provider-engine/subproviders/rpc';
+import { Request, Response, NextFunction } from 'express';
+import { BigNumber } from 'bignumber.js';
 import { Pool, PoolConfig } from 'pg';
 import { Readable, PassThrough } from 'stream';
 import {
@@ -18,14 +18,14 @@ import {
   LogFillContractEventArgs,
   LogCancelContractEventArgs,
 } from '0x.js';
-import { RelayDatabase, PostgresFacade } from './db';
+import { RelayDatabase, PostgresRelayDatabase } from './db';
 import v0ApiRouteFactory from './rest-api/routes';
 import { WebSocketNode } from './ws-api/websocket-node';
 import { RoutingError, BlockchainLogEvent, OrderbookOrder } from './types/core';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 import config from './config';
 
-BigNumber.BigNumber.config({
+BigNumber.config({
   EXPONENTIAL_AT: 1000,
 });
 
@@ -55,7 +55,7 @@ const createApp = async () => {
           database: config.PGDATABASE,
           port: config.PGPORT,
         });
-    relayDatabase = new PostgresFacade({
+    relayDatabase = new PostgresRelayDatabase({
       postgresPool: pool || '',
       orderTableName: config.PG_ORDERS_TABLE_NAME || '',
       tokenTableName: config.PG_TOKENS_TABLE_NAME || '',
@@ -85,8 +85,8 @@ const createApp = async () => {
   logger.log('verbose', 'Configured REST endpoints');
 
   const wss = expressWs.getWss('/ws');
-  // const websocketFeed = new WebSocketFeed({ logger, wss,  });
-  // (app as any).ws('/ws', (ws, req, next) => websocketFeed.acceptConnection(ws, req, next));
+  const websocketFeed = new WebSocketNode({ logger, wss });
+  (app as any).ws('/ws', (ws, req, next) => websocketFeed.acceptConnection(ws, req, next));
   logger.log('verbose', 'Configured WebSocket endpoints');
 
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -108,6 +108,7 @@ const createApp = async () => {
     .subscribeAsync(ExchangeEvents.LogFill, {}, ev => {
       logger.log('debug', 'LogFill received from 0x', ev);
       const logEvent = ev as BlockchainLogEvent;
+      console.log(logEvent);
       (logEvent as any).type = `Blockchain.${ev.event}`;
       zeroExStreamWrapper.push(logEvent);
     })
@@ -118,6 +119,7 @@ const createApp = async () => {
     .subscribeAsync(ExchangeEvents.LogCancel, {}, ev => {
       logger.log('debug', 'LogCancel received from 0x', ev);
       const logEvent = ev as BlockchainLogEvent;
+      console.log(logEvent);
       (logEvent as any).type = `Blockchain.${ev.event}`;
       zeroExStreamWrapper.push(logEvent);
     })
@@ -125,12 +127,14 @@ const createApp = async () => {
     .catch(e => logger.error(e));
   logger.log('verbose', 'Subscribed to ZeroEx Blockchain Log events');
 
-  // Feed all relevant event streams into orderbook
-  // zeroExStreamWrapper.pipe(relayDatabase);
+  // Relay Database gets all events from ZeroEx Stream
+  // (Eventually will be redis channels)
+  zeroExStreamWrapper.pipe(relayDatabase);
 
-  // Now we can subscribe to the (standardized) orderbook stream for relevant events
-  // orderbook.on(EventTypes.CONDUIT_ORDER_ADD, (order: OrderbookOrder) => {});
-  // orderbook.on(EventTypes.CONDUIT_ORDER_UPDATE, (order: OrderbookOrder) => {});
+  // Listen to all events emitted from Relay
+  // (Eventually will be redis channels)
+  websocketFeed.pipe(relayDatabase);
+
   return app;
 };
 

@@ -1,27 +1,19 @@
 import * as WebSocket from 'ws';
 import { EventEmitter } from 'events';
 import { Request, NextFunction } from 'express';
-import { MessageRequest, SubscribeRequestPayload, SnapshotResponsePayload } from './types';
+import { Message, SubscribeRequest, OrderbookSnapshot, AllMessageTypes } from './types';
 import { Logger } from '../util/logger';
+import { Duplex } from 'stream';
 
-export class WebSocketNode {
+export class WebSocketNode extends Duplex {
   private websockets: Set<WebSocket>;
   private wsServerRef: WebSocket.Server;
   private subscriptions: WeakMap<WebSocket, Array<string>>;
   private logger?: Logger;
-  private channelsAvailable = ['orderbook'];
+  private availableChannels = ['orderbook'];
 
-  constructor({
-    logger,
-    wss,
-    client,
-    subscription,
-  }: {
-    logger?: Logger;
-    wss: WebSocket.Server;
-    client: EventEmitter;
-    subscription: EventEmitter;
-  }) {
+  constructor({ logger, wss }: { logger?: Logger; wss: WebSocket.Server }) {
+    super();
     this.websockets = new Set();
     this.logger = logger;
     this.wsServerRef = wss;
@@ -37,8 +29,8 @@ export class WebSocketNode {
         switch (data.type) {
           case 'subscribe':
             this.log('debug', `Subscribe request received`);
-            const subscribeRequest = data as MessageRequest<SubscribeRequestPayload>;
-            this.handleSubscribeRequest(ws, subscribeRequest);
+            const subscribeRequest = data as Message<SubscribeRequest>;
+            this.handleChannelSubscribeRequest(ws, subscribeRequest);
             break;
           default:
             this.log(
@@ -54,14 +46,31 @@ export class WebSocketNode {
     }
   }
 
-  private handleSubscribeRequest(s: WebSocket, message: MessageRequest<SubscribeRequestPayload>) {
+  public receiveMessage(msg: AllMessageTypes) {
+    if (msg.channel === 'orderbook') {
+      if (msg.type === 'update') {
+        console.log('received update');
+      } else if (msg.type === 'snapshot') {
+        console.log('received snapshot');
+      } else {
+        console.log('unrecognized type');
+      }
+    }
+  }
+
+  _write(chunk: any, encoding: string, callback: Function): void {
+    throw new Error('Method not implemented.');
+  }
+
+  _read(size: number): void {}
+
+  private handleChannelSubscribeRequest(s: WebSocket, message: Message<SubscribeRequest>) {
     const { channel, type, payload } = message;
     const { baseTokenAddress, quoteTokenAddress, limit, snapshot } = payload;
     console.log(`user has requested ${channel} subscription with the following details`);
     console.log(`base token: ${baseTokenAddress}`);
     console.log(`quote token: ${quoteTokenAddress}`);
     console.log(`include snapshot: ${snapshot}, snapshot limit: ${limit}`);
-    // register
   }
 
   private removeConnection(ws: WebSocket) {
@@ -78,6 +87,10 @@ export class WebSocketNode {
 
   public handleReceiveMessageFromExchange(channel: string, msg: any) {}
 }
+
+// Bids will be sorted in descending order by price, and asks will be sorted in ascending order
+// by price. Within the price sorted orders, the orders are further sorted first by total fees,
+// then by expiration in ascending order.
 
 // public requestChannelSubscription(ws: WebSocket, payload: SubscribeRequestPayload) {
 //   // const channelHash = WebSocketFeed.getChannelHashFromPayload(payload);

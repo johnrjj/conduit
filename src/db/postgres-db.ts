@@ -1,6 +1,6 @@
-import * as BigNumber from 'bignumber.js';
+import { BigNumber } from 'bignumber.js';
 import { Duplex } from 'stream';
-import { ZeroEx } from '0x.js';
+import { ZeroEx, SignedOrder } from '0x.js';
 import { Pool } from 'pg';
 import { SQL } from 'sql-template-strings';
 import { RelayDatabase } from './types';
@@ -8,7 +8,6 @@ import { FeeApiRequest, FeeApiResponse, ApiOrderOptions, TokenPair } from '../re
 import {
   OrderbookOrder,
   OrderState,
-  SignedOrder,
   OrderHash,
   OrderbookPair,
   OrderCancelMessage,
@@ -44,7 +43,7 @@ export interface PostgresOrderModel {
   order_hash: string;
 }
 
-export class PostgresFacade extends Duplex implements RelayDatabase {
+export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
   private pool: Pool;
   private orderTableName: string;
   private tokenTableName: string;
@@ -62,21 +61,10 @@ export class PostgresFacade extends Duplex implements RelayDatabase {
     this.pool = postgresPool;
     this.orderTableName = orderTableName || 'orders';
     this.tokenTableName = tokenTableName || 'tokens';
-    this.tokenPairsTableName = 'token_pairs';
+    this.tokenPairsTableName = tokenPairTableName || 'token_pairs';
     this.logger = logger;
 
     this.validatePostgresInstance();
-  }
-
-  private validatePostgresInstance() {
-    this.pool
-      .query(SQL`select to_regclass(${this.orderTableName})`)
-      .then(res => !res.rows[0].to_regclass && this.log('debug', 'Orders table does not exist'))
-      .catch(e => this.log('error', 'Error checking if orders table exists'));
-  }
-
-  private query({ text, params }) {
-    return this.pool.query(text, params);
   }
 
   async getTokenPairs(): Promise<Array<TokenPair>> {
@@ -237,6 +225,17 @@ export class PostgresFacade extends Duplex implements RelayDatabase {
     console.log('read postgres orderbook size:', size);
   }
 
+  private validatePostgresInstance() {
+    this.pool
+      .query(SQL`select to_regclass(${this.orderTableName})`)
+      .then(res => !res.rows[0].to_regclass && this.log('debug', 'Orders table does not exist'))
+      .catch(e => this.log('error', 'Error checking if orders table exists'));
+  }
+
+  private query({ text, params }) {
+    return this.pool.query(text, params);
+  }
+
   private formatOrderFromDb(dbOrder: PostgresOrderModel): SignedOrder {
     const order: SignedOrder = {
       exchangeContractAddress: dbOrder.exchange_contract_address,
@@ -245,12 +244,12 @@ export class PostgresFacade extends Duplex implements RelayDatabase {
       makerTokenAddress: dbOrder.maker_token_address,
       takerTokenAddress: dbOrder.taker_token_address,
       feeRecipient: dbOrder.fee_recipient,
-      makerTokenAmount: new BigNumber.BigNumber(dbOrder.maker_token_amount),
-      takerTokenAmount: new BigNumber.BigNumber(dbOrder.taker_token_amount),
-      makerFee: new BigNumber.BigNumber(dbOrder.maker_fee),
-      takerFee: new BigNumber.BigNumber(dbOrder.taker_fee),
-      expirationUnixTimestampSec: new BigNumber.BigNumber(dbOrder.expiration_unix_timestamp_sec),
-      salt: new BigNumber.BigNumber(dbOrder.salt),
+      makerTokenAmount: new BigNumber(dbOrder.maker_token_amount),
+      takerTokenAmount: new BigNumber(dbOrder.taker_token_amount),
+      makerFee: new BigNumber(dbOrder.maker_fee),
+      takerFee: new BigNumber(dbOrder.taker_fee),
+      expirationUnixTimestampSec: new BigNumber(dbOrder.expiration_unix_timestamp_sec),
+      salt: new BigNumber(dbOrder.salt),
       ecSignature: {
         v: parseInt(dbOrder.ec_sig_v, 10),
         r: dbOrder.ec_sig_r,

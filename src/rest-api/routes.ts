@@ -2,7 +2,6 @@ import * as bodyParser from 'body-parser';
 import { Router } from 'express';
 import { ZeroEx, Token, SignedOrder as ZeroExSignedOrder } from '0x.js';
 import { validateEndpointSignedOrderBySchema } from '../util/validate';
-import { pairTokens } from '../util/token';
 import { mapOrderApiPayloadToSignedOrder, mapZeroExPortalOrderJSONToSignedOrder } from './adapter';
 import { Logger } from '../util/logger';
 import { RelayDatabase } from '../db';
@@ -22,8 +21,8 @@ const createRouter = (db: RelayDatabase, zeroEx: ZeroEx, logger: Logger) => {
   router.use(bodyParser.urlencoded({ extended: true }));
 
   router.get('/token_pairs', async (req, res) => {
-    const { page, per_page }: PaginationParams = req.query;
-    const pairs = await db.getTokenPairs();
+    const { page, per_page: perPage }: PaginationParams = req.query;
+    const pairs = await db.getTokenPairs(page, perPage);
     res.status(201).json(pairs);
   });
 

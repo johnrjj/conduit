@@ -1,6 +1,6 @@
 import { BigNumber } from 'bignumber.js';
-import { ZeroEx, SignedOrder as ZeroExSignedOrder } from '0x.js';
-import { OrderbookOrder, SignedOrder } from '../types/core';
+import { ZeroEx, SignedOrder } from '0x.js';
+import { OrderbookOrder } from '../types/core';
 import { OrderPayload, ZeroExPortalOrderJSON } from './types';
 import { serializeSignedOrder } from '../util/order';
 

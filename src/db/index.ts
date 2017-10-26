@@ -1,4 +1,4 @@
 import { RelayDatabase } from './types';
-import { PostgresFacade } from './postgres-db';
+import { PostgresRelayDatabase } from './postgres-db';
 
-export { RelayDatabase, PostgresFacade };
+export { RelayDatabase, PostgresRelayDatabase };

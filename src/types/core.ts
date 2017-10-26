@@ -1,9 +1,11 @@
-import * as BigNumber from 'bignumber.js';
+import { BigNumber } from 'bignumber.js';
 import {
   LogEvent,
   LogFillContractEventArgs,
   LogCancelContractEventArgs,
   LogErrorContractEventArgs,
+  SignedOrder,
+  ECSignature,
 } from '0x.js';
 
 export enum OrderState {
@@ -14,21 +16,6 @@ export enum OrderState {
 }
 
 export type OrderHash = string;
-
-export interface Order {
-  exchangeContractAddress: string;
-  maker: string;
-  taker: string;
-  makerTokenAddress: string;
-  takerTokenAddress: string;
-  feeRecipient: string;
-  makerTokenAmount: BigNumber.BigNumber;
-  takerTokenAmount: BigNumber.BigNumber;
-  makerFee: BigNumber.BigNumber;
-  takerFee: BigNumber.BigNumber;
-  expirationUnixTimestampSec: BigNumber.BigNumber;
-  salt: BigNumber.BigNumber;
-}
 
 export interface SerializedOrder {
   exchangeContractAddress: string;
@@ -45,16 +32,6 @@ export interface SerializedOrder {
   salt: string;
 }
 
-export interface ECSignature {
-  v: number;
-  r: string;
-  s: string;
-}
-
-export interface SignedOrder extends Order {
-  ecSignature: ECSignature;
-}
-
 export interface SerializedSignedOrder extends SerializedOrder {
   ecSignature: ECSignature;
 }
@@ -62,7 +39,7 @@ export interface SerializedSignedOrder extends SerializedOrder {
 export interface OrderbookOrder {
   signedOrder: SignedOrder;
   state: OrderState;
-  remainingTakerTokenAmount: BigNumber.BigNumber;
+  remainingTakerTokenAmount: BigNumber;
 }
 
 export interface SerializedOrderbookOrder {
