@@ -58,7 +58,9 @@ export class WebSocketNode extends Duplex {
     }
   }
 
-  _write(chunk: any, encoding: string, callback: Function): void {
+  _write(msg: any, encoding: string, callback: Function): void {
+    this.log('debug', 'Websocket Node received msg', msg);
+    console.log(msg);
     throw new Error('Method not implemented.');
   }
 
@@ -84,8 +86,6 @@ export class WebSocketNode extends Duplex {
     }
     this.logger.log(level, message, meta);
   }
-
-  public handleReceiveMessageFromExchange(channel: string, msg: any) {}
 }
 
 // Bids will be sorted in descending order by price, and asks will be sorted in ascending order

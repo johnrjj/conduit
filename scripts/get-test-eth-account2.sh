@@ -1,0 +1,1 @@
+curl http://github-faucet.kovan.network/url --data "address=https://gist.github.com/johnrjj/3afc5fab19ce8ea6a6ff2dc2c96f30e6"

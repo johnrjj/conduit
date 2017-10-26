@@ -16,6 +16,7 @@ export interface AppConfig {
   PG_TOKENS_TABLE_NAME?: string;
   PG_TOKEN_PAIRS_TABLE_NAME?: string;
   PG_APP_TABLE_NAME?: string;
+  REDIS_URL?: string;
 }
 
 const config: AppConfig = {
@@ -37,6 +38,7 @@ const config: AppConfig = {
   PG_TOKENS_TABLE_NAME: 'tokens',
   PG_TOKEN_PAIRS_TABLE_NAME: 'token_pairs',
   PG_APP_TABLE_NAME: 'app',
+  REDIS_URL: process.env.REDIS_URL,
 };
 
 export default config;

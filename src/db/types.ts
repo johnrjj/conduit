@@ -1,8 +1,15 @@
 import { Duplex } from 'stream';
+import { SignedOrder } from '0x.js';
+import { BigNumber } from 'bignumber.js';
+import { OrderbookOrder, OrderbookPair } from '../types/core';
 import { FeeApiRequest, FeeApiResponse, ApiOrderOptions, TokenPair } from '../rest-api/types';
-import { OrderbookOrder, OrderbookPair, SignedOrder } from '../types/core';
 
-interface RelayDatabase extends Duplex {
+// signedorder superset, need more guidance from zeroex about order metadata
+export interface SignedOrderWithCurrentBalance extends SignedOrder {
+  remainingTakerTokenAmount: BigNumber;
+}
+
+export interface RelayDatabase extends Duplex {
   getTokenPairs(page: number, perPage: number): Promise<Array<TokenPair>>;
   getOrders(options?: ApiOrderOptions): Promise<Array<SignedOrder | null>>;
   getOrder(orderHash: string): Promise<SignedOrder | null>;
@@ -10,5 +17,3 @@ interface RelayDatabase extends Duplex {
   postOrder(orderHash: string, signedOrder: SignedOrder): Promise<void>;
   getOrderbook(baseTokenAddress: string, quoteTokenAddress: string): Promise<OrderbookPair>;
 }
-
-export { RelayDatabase };

@@ -60,6 +60,7 @@ const createApp = async () => {
       orderTableName: config.PG_ORDERS_TABLE_NAME || '',
       tokenTableName: config.PG_TOKENS_TABLE_NAME || '',
       tokenPairTableName: config.PG_TOKEN_PAIRS_TABLE_NAME || '',
+      zeroEx,
       logger,
     });
     await pool.connect();
@@ -77,9 +78,7 @@ const createApp = async () => {
   app.use(helmet());
   app.use(cors());
 
-  app.get('/healthcheck', (req, res) => {
-    res.sendStatus(200);
-  });
+  app.get('/healthcheck', (req, res) => res.sendStatus(200));
 
   app.use('/api/v0', v0ApiRouteFactory(relayDatabase, zeroEx, logger));
   logger.log('verbose', 'Configured REST endpoints');
@@ -104,9 +103,10 @@ const createApp = async () => {
     objectMode: true,
     highWaterMark: 1024,
   });
+
   zeroEx.exchange
     .subscribeAsync(ExchangeEvents.LogFill, {}, ev => {
-      logger.log('debug', 'LogFill received from 0x', ev);
+      logger.log('verbose', 'LogFill received from 0x', ev);
       const logEvent = ev as BlockchainLogEvent;
       console.log(logEvent);
       (logEvent as any).type = `Blockchain.${ev.event}`;
@@ -114,10 +114,9 @@ const createApp = async () => {
     })
     .then(cancelToken => {})
     .catch(e => logger.error(e));
-
   zeroEx.exchange
     .subscribeAsync(ExchangeEvents.LogCancel, {}, ev => {
-      logger.log('debug', 'LogCancel received from 0x', ev);
+      logger.log('verbose', 'LogCancel received from 0x', ev);
       const logEvent = ev as BlockchainLogEvent;
       console.log(logEvent);
       (logEvent as any).type = `Blockchain.${ev.event}`;
@@ -125,14 +124,14 @@ const createApp = async () => {
     })
     .then(cancelToken => {})
     .catch(e => logger.error(e));
-  logger.log('verbose', 'Subscribed to ZeroEx Blockchain Log events');
+  logger.log('verbose', 'Subscribed to ZeroEx Blockchain Fill and Cancel Log events');
 
   // Relay Database gets all events from ZeroEx Stream
-  // (Eventually will be redis channels)
+  // (Eventually will be redis/kafka channels)
   zeroExStreamWrapper.pipe(relayDatabase);
 
-  // Listen to all events emitted from Relay
-  // (Eventually will be redis channels)
+  // Websocket litens to all events emitted from Relay
+  // (Eventually will be redis/kafka channels)
   websocketFeed.pipe(relayDatabase);
 
   return app;

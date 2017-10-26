@@ -11,7 +11,7 @@
     "dev": "ts-node --inspect src/index",
     "test": "jest",
     "prettier": "prettier --single-quote --print-width 100 --trailing-comma es5 --write 'src/**/*.ts'",
-    "deploy": "now && now alias && now 0x-relayer-api --safe ",
+    "deploy": "now && now alias && now 0x-relayer-api --safe",
     "now-start": "node dist/index",
     "heroku-postbuild": "npm run build"
   },

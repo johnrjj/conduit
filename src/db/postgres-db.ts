@@ -3,7 +3,7 @@ import { Duplex } from 'stream';
 import { ZeroEx, SignedOrder } from '0x.js';
 import { Pool } from 'pg';
 import { SQL } from 'sql-template-strings';
-import { RelayDatabase } from './types';
+import { RelayDatabase, SignedOrderWithCurrentBalance } from './types';
 import { FeeApiRequest, FeeApiResponse, ApiOrderOptions, TokenPair } from '../rest-api/types';
 import {
   OrderbookOrder,
@@ -21,6 +21,7 @@ export interface PostgresOrderbookOptions {
   orderTableName: string;
   tokenTableName: string;
   tokenPairTableName: string;
+  zeroEx: ZeroEx;
   logger?: Logger;
 }
 
@@ -41,6 +42,7 @@ export interface PostgresOrderModel {
   ec_sig_r: string;
   ec_sig_s: string;
   order_hash: string;
+  taker_token_remaining_amount: string;
 }
 
 export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
@@ -48,6 +50,7 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
   private orderTableName: string;
   private tokenTableName: string;
   private tokenPairsTableName: string;
+  private zeroEx: ZeroEx;
   private logger?: Logger;
 
   constructor({
@@ -55,13 +58,15 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
     orderTableName,
     tokenTableName,
     tokenPairTableName,
+    zeroEx,
     logger,
   }: PostgresOrderbookOptions) {
-    super();
+    super({ objectMode: true, highWaterMark: 1024 });
     this.pool = postgresPool;
     this.orderTableName = orderTableName || 'orders';
     this.tokenTableName = tokenTableName || 'tokens';
     this.tokenPairsTableName = tokenPairTableName || 'token_pairs';
+    this.zeroEx = zeroEx;
     this.logger = logger;
 
     this.validatePostgresInstance();
@@ -106,7 +111,7 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
     return pairs;
   }
 
-  async getOrders(options?: ApiOrderOptions | undefined): Promise<SignedOrder[]> {
+  async getOrders(options?: ApiOrderOptions): Promise<SignedOrder[]> {
     const res = await this.pool.query(SQL`
       select * 
       from orders
@@ -122,10 +127,28 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
       where order_hash = ${orderHash}
     `);
     if (res.rows.length === 0) {
-      this.log('debug', `No order ${orderHash} found in database`);
+      this.log('verbose', `No order ${orderHash} found in database`);
       return null;
     }
     const formattedOrder = this.formatOrderFromDb(res.rows[0]);
+    return formattedOrder;
+  }
+
+  // consolidate with getOrder
+  async getFullOrder(orderHash: string): Promise<SignedOrderWithCurrentBalance | null> {
+    const res = await this.pool.query(SQL`
+      select * 
+      from orders
+      where order_hash = ${orderHash}
+    `);
+    if (res.rows.length === 0) {
+      this.log('verbose', `No order ${orderHash} found in database`);
+      return null;
+    }
+    const formattedOrder: SignedOrderWithCurrentBalance = {
+      ...this.formatOrderFromDb(res.rows[0]),
+      remainingTakerTokenAmount: res.rows[0]['remaining_taker_taken_amount'],
+    };
     return formattedOrder;
   }
 
@@ -217,12 +240,95 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
     }
   }
 
-  _write(chunk: any, encoding: string, callback: Function): void {
-    throw new Error('Method not implemented.');
+  _write(msg, encoding, callback) {
+    this.log('debug', `Postgres Relay received a message of type ${msg.type || 'unknown'}`);
+    // push downstream
+    this.push(msg);
+    switch (msg.type) {
+      case 'Blockchain.LogFill':
+        const blockchainFillLog = msg as BlockchainLogEvent;
+        const payload = blockchainFillLog.args as OrderFillMessage;
+        this.handleOrderFillMessage(blockchainFillLog.args as OrderFillMessage);
+        break;
+      case 'Blockchain.LogCancel':
+        const blockchainCancelLog = msg as BlockchainLogEvent;
+        this.log('debug', 'Doing nothing with Blockchain.LogCancel right now');
+        break;
+      default:
+        this.log(
+          'debug',
+          `Postgres Relay received event ${msg.type} it doesn't know how to handle`
+        );
+        break;
+    }
+    callback();
   }
 
-  _read(size: number): void {
-    console.log('read postgres orderbook size:', size);
+  _read(size: number): void {}
+
+  private async handleOrderFillMessage(fillMessage: OrderFillMessage) {
+    const { orderHash, filledMakerTokenAmount, filledTakerTokenAmount } = fillMessage;
+    this.log(
+      'debug',
+      `Order ${orderHash} details:
+      FilledMakerAmount: ${filledMakerTokenAmount.toString()}
+      FilledTakerAmount: ${filledTakerTokenAmount.toString()}`
+    );
+
+    const existingOrder = await this.getFullOrder(orderHash);
+    if (!existingOrder) {
+      this.log(
+        'debug',
+        `Order ${orderHash} from OrderFillMessage does not exist in our orderbook, skipping`
+      );
+      return;
+    }
+
+    this.log('info', `Updating order ${orderHash} in orderbook - got a fill event`);
+    const takerTokenRemainingAmount = await this.getRemainingTakerAmount(
+      orderHash,
+      existingOrder.takerTokenAmount
+    );
+    this.log(
+      'debug',
+      `Order ${orderHash} has ${takerTokenRemainingAmount.toString()} remaining to fill`
+    );
+
+    const state = takerTokenRemainingAmount.greaterThan(0) ? OrderState.OPEN : OrderState.CLOSED;
+
+    this.updateRemainingTakerTokenAmountForOrderInDatabase(orderHash, takerTokenRemainingAmount);
+    this.log(
+      'info',
+      `Updated ${orderHash} in postgres database. Updated Taker Token Amount to ${takerTokenRemainingAmount.toString()}`
+    );
+
+    // emit event?
+    // this.emit(EventTypes.CONDUIT_ORDER_UPDATE, updatedOrder);
+  }
+
+  private async updateRemainingTakerTokenAmountForOrderInDatabase(
+    orderHash: string,
+    remainingTakerTokenAmount: BigNumber
+  ) {
+    const res = await this.pool.query(SQL`
+      UPDATE orders 
+      SET taker_token_remaining_amount = ${remainingTakerTokenAmount.toString()}
+      WHERE order_hash = ${orderHash};
+    `);
+    console.log(res);
+  }
+
+  private async getRemainingTakerAmount(
+    orderHash: string,
+    originalTakerTokenAmount: BigNumber
+  ): Promise<BigNumber> {
+    const takerAmountUnavailable = await this.zeroEx.exchange.getUnavailableTakerAmountAsync(
+      orderHash
+    );
+    const takerAmountRemaining = originalTakerTokenAmount.sub(
+      new BigNumber(takerAmountUnavailable)
+    );
+    return takerAmountRemaining;
   }
 
   private validatePostgresInstance() {
