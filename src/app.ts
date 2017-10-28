@@ -23,6 +23,7 @@ import v0ApiRouteFactory from './rest-api/routes';
 import { WebSocketNode } from './ws-api/websocket-node';
 import { RoutingError, BlockchainLogEvent, OrderbookOrder } from './types/core';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
+import { populateTokenTable, populateTokenPairTable } from './test-data/generate-data';
 import config from './config';
 
 BigNumber.config({
@@ -65,6 +66,37 @@ const createApp = async () => {
     });
     await pool.connect();
     logger.log('info', `Connected to Postres Database`);
+
+    if (config.PG_POPULATE_DATABASE) {
+      logger.log('info', 'Populating postgres database with data (First time config)');
+      // soft fail, will continue if populates fail.
+      try {
+        const tokenInsertRes = await populateTokenTable(
+          relayDatabase as PostgresRelayDatabase,
+          zeroEx
+        );
+        logger.log('debug', 'Populated token table successfully');
+      } catch (e) {
+        logger.log(
+          'error',
+          `Error inserting tokens into postgres token table ${config.PG_TOKENS_TABLE_NAME}`,
+          e
+        );
+      }
+      try {
+        const tokenPairInsertRes = await populateTokenPairTable(
+          relayDatabase as PostgresRelayDatabase,
+          zeroEx
+        );
+        logger.log('debug', 'Populated token pair table successfully');
+      } catch (e) {
+        logger.log(
+          'error',
+          `Error inserting tokenpairs into postgres token pair table ${config.PG_TOKEN_PAIRS_TABLE_NAME}`,
+          e
+        );
+      }
+    }
   } catch (e) {
     logger.log('error', 'Error connecting to Postgres', e);
     throw e;

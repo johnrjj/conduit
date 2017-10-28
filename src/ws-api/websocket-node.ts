@@ -25,6 +25,7 @@ export class WebSocketNode extends Duplex {
       this.websockets.add(ws);
       ws.on('close', n => this.removeConnection(ws));
       ws.on('message', message => {
+        this.log('verbose', 'WebSocket node received message from client', message);
         const data = JSON.parse(message.toString());
         switch (data.type) {
           case 'subscribe':

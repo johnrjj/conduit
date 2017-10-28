@@ -1,10 +1,11 @@
 import { BigNumber } from 'bignumber.js';
 import { Duplex } from 'stream';
-import { ZeroEx, SignedOrder } from '0x.js';
 import { Pool } from 'pg';
 import { SQL } from 'sql-template-strings';
+import { ZeroEx, SignedOrder, Token } from '0x.js';
 import { RelayDatabase, SignedOrderWithCurrentBalance } from './types';
 import { FeeApiRequest, FeeApiResponse, ApiOrderOptions, TokenPair } from '../rest-api/types';
+import { Message, OrderbookUpdate } from '../ws-api/types';
 import {
   OrderbookOrder,
   OrderState,
@@ -45,6 +46,20 @@ export interface PostgresOrderModel {
   taker_token_remaining_amount: string;
 }
 
+export interface PostgresTokenPairsModel {
+  base_token: string;
+  quote_token: string;
+}
+
+export interface PostgresTokenModel {
+  address: string;
+  symbol: string; // ex: 'ZRX'
+  name: string; // ex: 'ZeroEx Token'
+  min_amount: string;
+  max_amount: string;
+  precision: number;
+}
+
 export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
   private pool: Pool;
   private orderTableName: string;
@@ -74,7 +89,7 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
 
   async getTokenPairs(): Promise<Array<TokenPair>> {
     const res = await this.pool.query(SQL`
-      select 
+      SELECT 
         t1.address as base_token_address,
         t1.symbol as base_token_symbol,
         t1.name as base_token_name,
@@ -87,7 +102,7 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
         t2.min_amount as quote_token_min_amount,
         t2.max_amount as quote_token_max_amount,
         t2.precision as quote_token_precision
-      from token_pairs tp
+      FROM token_pairs tp
         INNER JOIN tokens t1 ON (tp.base_token = t1.address)
         INNER JOIN tokens t2 ON (tp.quote_token = t2.address)
     `);
@@ -113,8 +128,8 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
 
   async getOrders(options?: ApiOrderOptions): Promise<SignedOrder[]> {
     const res = await this.pool.query(SQL`
-      select * 
-      from orders
+      SELECT * 
+      FROM orders
   `);
     const formattedOrders = res.rows.map(this.formatOrderFromDb);
     return formattedOrders;
@@ -122,9 +137,9 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
 
   async getOrder(orderHash: string): Promise<SignedOrder | null> {
     const res = await this.pool.query(SQL`
-      select * 
-      from orders
-      where order_hash = ${orderHash}
+      SELECT * 
+      FROM orders
+      WHERE order_hash = ${orderHash}
     `);
     if (res.rows.length === 0) {
       this.log('verbose', `No order ${orderHash} found in database`);
@@ -134,37 +149,19 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
     return formattedOrder;
   }
 
-  // consolidate with getOrder
-  async getFullOrder(orderHash: string): Promise<SignedOrderWithCurrentBalance | null> {
-    const res = await this.pool.query(SQL`
-      select * 
-      from orders
-      where order_hash = ${orderHash}
-    `);
-    if (res.rows.length === 0) {
-      this.log('verbose', `No order ${orderHash} found in database`);
-      return null;
-    }
-    const formattedOrder: SignedOrderWithCurrentBalance = {
-      ...this.formatOrderFromDb(res.rows[0]),
-      remainingTakerTokenAmount: res.rows[0]['remaining_taker_taken_amount'],
-    };
-    return formattedOrder;
-  }
-
   async getOrderbook(baseTokenAddress, quoteTokenAddress): Promise<OrderbookPair> {
     const bidsQueryResPromise = this.pool.query(SQL`
-      select * 
-      from orders
-      where maker_token_address = ${baseTokenAddress}
-      and taker_token_address = ${quoteTokenAddress}
+      SELECT * 
+      FROM orders
+      WHERE maker_token_address = ${baseTokenAddress}
+        and taker_token_address = ${quoteTokenAddress}
     `);
 
     const asksQueryResPromise = this.pool.query(SQL`
-      select * 
-      from orders
-      where maker_token_address = ${quoteTokenAddress}
-      and taker_token_address = ${baseTokenAddress}
+      SELECT * 
+      FROM orders
+      WHERE maker_token_address = ${quoteTokenAddress}
+        and taker_token_address = ${baseTokenAddress}
   `);
 
     try {
@@ -238,6 +235,37 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
       this.log('error', `Error inserting order ${orderHash} into postgres.`, err);
       throw err;
     }
+
+    // emit event
+    const event: Message<OrderbookUpdate> = {
+      type: 'update',
+      channel: 'orderbook',
+      payload: signedOrder,
+    };
+    this.emit('orderbook:update', event);
+  }
+
+  protected async getSnapshot() {
+    throw new Error('not yet implemented');
+  }
+
+  async addTokenPair(baseTokenAddress, quoteTokenAddress) {
+    const insertRes = await this.pool.query(SQL`
+      INSERT 
+      INTO    token_pairs
+              (base_token, quote_token)
+      VALUES  (${baseTokenAddress}, ${quoteTokenAddress})
+    `);
+  }
+
+  async addToken(token: Token) {
+    // note: right now we're overloading precision with decimals, need to post issue on relayer spec asking for clarification
+    const res = await this.pool.query(SQL`
+      INSERT 
+      INTO    tokens
+              (address, symbol, min_amount, max_amount, precision, name)
+      VALUES  (${token.address}, ${token.symbol}, ${0}, ${1000000000000000000}, ${token.decimals}, ${token.name})
+    `);
   }
 
   _write(msg, encoding, callback) {
@@ -302,8 +330,14 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
       `Updated ${orderHash} in postgres database. Updated Taker Token Amount to ${takerTokenRemainingAmount.toString()}`
     );
 
-    // emit event?
-    // this.emit(EventTypes.CONDUIT_ORDER_UPDATE, updatedOrder);
+    // emit event
+    // throw new Error('finish this part...');
+    // const event: Message<OrderbookUpdate> = {
+    //   type: 'fill',
+    //   channel: 'orderbook',
+    //   payload: existingOrder,
+    // };
+    // this.emit('orderbook:update', event);
   }
 
   private async updateRemainingTakerTokenAmountForOrderInDatabase(
@@ -331,9 +365,27 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
     return takerAmountRemaining;
   }
 
+  // consolidate with getOrder
+  private async getFullOrder(orderHash: string): Promise<SignedOrderWithCurrentBalance | null> {
+    const res = await this.pool.query(SQL`
+        SELECT * 
+        FROM orders
+        WHERE order_hash = ${orderHash}
+      `);
+    if (res.rows.length === 0) {
+      this.log('verbose', `No order ${orderHash} found in database`);
+      return null;
+    }
+    const formattedOrder: SignedOrderWithCurrentBalance = {
+      ...this.formatOrderFromDb(res.rows[0]),
+      remainingTakerTokenAmount: res.rows[0]['remaining_taker_taken_amount'],
+    };
+    return formattedOrder;
+  }
+
   private validatePostgresInstance() {
     this.pool
-      .query(SQL`select to_regclass(${this.orderTableName})`)
+      .query(SQL`SELECT to_regclass(${this.orderTableName})`)
       .then(res => !res.rows[0].to_regclass && this.log('debug', 'Orders table does not exist'))
       .catch(e => this.log('error', 'Error checking if orders table exists'));
   }

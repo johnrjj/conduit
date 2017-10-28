@@ -1,15 +1,12 @@
 import { SignedOrder } from '0x.js';
 
-enum MessageType {
-  'update' = 'update',
-  'snapshot' = 'snapshot',
-}
+type MessageType = 'update' | 'snapshot' | 'fill';
 
-enum ChannelType {
-  'orderbook' = 'orderbook',
-}
+type ChannelType = 'orderbook';
 
-export interface Message<T extends SubscribeRequest | OrderbookSnapshot | OrderbookUpdate> {
+export interface Message<
+  T extends SubscribeRequest | OrderbookSnapshot | OrderbookUpdate | OrderbookFill
+> {
   type: MessageType;
   channel: ChannelType;
   payload: T;
@@ -29,7 +26,12 @@ export interface OrderbookSnapshot {
 
 export type OrderbookUpdate = SignedOrder;
 
+// NON STANDARD!! Relayer spec needs a way to communicate fill updates
+// need to request additional data...
+export type OrderbookFill = SignedOrder;
+
 export type AllMessageTypes =
   | Message<SubscribeRequest>
   | Message<OrderbookSnapshot>
-  | Message<OrderbookUpdate>;
+  | Message<OrderbookUpdate>
+  | Message<OrderbookFill>;

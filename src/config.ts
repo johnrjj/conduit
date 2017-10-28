@@ -16,6 +16,7 @@ export interface AppConfig {
   PG_TOKENS_TABLE_NAME?: string;
   PG_TOKEN_PAIRS_TABLE_NAME?: string;
   PG_APP_TABLE_NAME?: string;
+  PG_POPULATE_DATABASE?: boolean;
   REDIS_URL?: string;
 }
 
@@ -38,6 +39,7 @@ const config: AppConfig = {
   PG_TOKENS_TABLE_NAME: 'tokens',
   PG_TOKEN_PAIRS_TABLE_NAME: 'token_pairs',
   PG_APP_TABLE_NAME: 'app',
+  PG_POPULATE_DATABASE: process.env.PG_POPULATE_DATABASE === 'true' || false,
   REDIS_URL: process.env.REDIS_URL,
 };
 
