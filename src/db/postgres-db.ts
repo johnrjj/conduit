@@ -97,7 +97,7 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
         t1.max_amount as base_token_max_amount,
         t1.precision as base_token_precision,
         t2.address as quote_token_address,
-        t2.symbol as quote_token_alias,
+        t2.symbol as quote_token_symbol,
         t2.name as quote_token_name,
         t2.min_amount as quote_token_min_amount,
         t2.max_amount as quote_token_max_amount,
@@ -108,13 +108,13 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
     `);
     const pairs = res.rows.map(row => {
       const pair: TokenPair = {
-        [row.base_token_alias]: {
+        [row.base_token_symbol]: {
           address: row.base_token_address,
           maxAmount: row.base_token_max_amount,
           minAmount: row.base_token_min_amount,
           precision: parseInt(row.base_token_precision, 10),
         },
-        [row.quote_token_alias]: {
+        [row.quote_token_symbol]: {
           address: row.quote_token_address,
           maxAmount: row.quote_token_max_amount,
           minAmount: row.quote_token_min_amount,
