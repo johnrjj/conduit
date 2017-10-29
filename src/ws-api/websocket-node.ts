@@ -1,28 +1,54 @@
 import * as WebSocket from 'ws';
 import { EventEmitter } from 'events';
 import { Request, NextFunction } from 'express';
+import { RedisClient } from 'redis';
 import { Message, SubscribeRequest, OrderbookSnapshot, AllMessageTypes } from './types';
 import { Logger } from '../util/logger';
 import { Duplex } from 'stream';
 
 export class WebSocketNode extends Duplex {
-  private websockets: Set<WebSocket>;
   private wsServerRef: WebSocket.Server;
   private subscriptions: WeakMap<WebSocket, Array<string>>;
+  private channelSubscriptions = new Map<string, Set<WebSocket>>();
+  private redisSubscriber: RedisClient;
+  private redisPublisher: RedisClient;
   private logger?: Logger;
-  private availableChannels = ['orderbook'];
 
-  constructor({ logger, wss }: { logger?: Logger; wss: WebSocket.Server }) {
-    super();
-    this.websockets = new Set();
+  constructor({
+    logger,
+    wss,
+    redisPublisher,
+    redisSubscriber,
+  }: {
+    logger?: Logger;
+    wss: WebSocket.Server;
+    redisSubscriber: RedisClient;
+    redisPublisher: RedisClient;
+  }) {
+    super({ objectMode: true, highWaterMark: 1024 });
     this.logger = logger;
     this.wsServerRef = wss;
+    this.redisSubscriber = redisSubscriber;
+    this.redisPublisher = redisPublisher;
+
+    this.redisSubscriber.on('message', (channel, message) => {
+      this.log('verobse', `redis message received from websocket server: ${channel}`, message);
+      if (!this.channelSubscriptions.has(channel)) {
+        return;
+      }
+      const subscribers = this.channelSubscriptions.get(channel);
+      if (!subscribers) {
+        return;
+      }
+      subscribers.forEach(ws => {
+        ws.send(message);
+      });
+    });
   }
 
   public acceptConnection(ws: WebSocket, req: Request, next: NextFunction): void {
     try {
       this.log('debug', `Websocket connection connected and registered`);
-      this.websockets.add(ws);
       ws.on('close', n => this.removeConnection(ws));
       ws.on('message', message => {
         this.log('verbose', 'WebSocket node received message from client', message);
@@ -47,22 +73,9 @@ export class WebSocketNode extends Duplex {
     }
   }
 
-  public receiveMessage(msg: AllMessageTypes) {
-    if (msg.channel === 'orderbook') {
-      if (msg.type === 'update') {
-        console.log('received update');
-      } else if (msg.type === 'snapshot') {
-        console.log('received snapshot');
-      } else {
-        console.log('unrecognized type');
-      }
-    }
-  }
-
   _write(msg: any, encoding: string, callback: Function): void {
     this.log('debug', 'Websocket Node received msg', msg);
     console.log(msg);
-    throw new Error('Method not implemented.');
   }
 
   _read(size: number): void {}
@@ -74,11 +87,32 @@ export class WebSocketNode extends Duplex {
     console.log(`base token: ${baseTokenAddress}`);
     console.log(`quote token: ${quoteTokenAddress}`);
     console.log(`include snapshot: ${snapshot}, snapshot limit: ${limit}`);
+
+    const channelHash = `${channel}.${type}:${baseTokenAddress}:${quoteTokenAddress}`;
+    if (!this.channelSubscriptions.has(channelHash)) {
+      this.log('debug', `First to subscribe to ${channelHash}, setting up channel`);
+      this.channelSubscriptions.set(channelHash, new Set<WebSocket>());
+    }
+    const subscriptions = this.channelSubscriptions.get(channelHash) as Set<WebSocket>;
+
+    if (subscriptions && subscriptions.size < 1) {
+      this.redisSubscriber.subscribe(channelHash);
+      this.log('debug', `Websocket node subscribed to ${channelHash}`);
+    }
+    subscriptions.add(s);
+    this.channelSubscriptions.set(channelHash, subscriptions);
+    this.log('debug', `Websocket client subscribed to ${channelHash}`);
   }
 
   private removeConnection(ws: WebSocket) {
-    this.log('debug', 'Websocket disconnected, unregistering');
-    this.websockets.delete(ws);
+    // need unsubscribe logic here.
+    this.channelSubscriptions.forEach((subscriptions, channel) => {
+      if (subscriptions.has(ws)) {
+        this.log('verbose', `Unregistering disconnecting websocket from ${channel}`);
+        subscriptions.delete(ws);
+      }
+    });
+    this.log('debug', 'Websocket disconnected, unregistered subscriptions');
   }
 
   private log(level: string, message: string, meta?: any) {

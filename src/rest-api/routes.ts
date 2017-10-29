@@ -4,7 +4,7 @@ import { ZeroEx, Token, SignedOrder as ZeroExSignedOrder } from '0x.js';
 import { validateEndpointSignedOrderBySchema } from '../util/validate';
 import { mapOrderApiPayloadToSignedOrder, mapZeroExPortalOrderJSONToSignedOrder } from './adapter';
 import { Logger } from '../util/logger';
-import { RelayDatabase } from '../db';
+import { RelayDatabase } from '../relay';
 import {
   OrderPayload,
   ApiOrderOptions,
@@ -37,6 +37,10 @@ const createRouter = (db: RelayDatabase, zeroEx: ZeroEx, logger: Logger) => {
       return next({ errorMessage: 'quoteTokenAddress missing' });
     }
     try {
+      logger.log(
+        'verbose',
+        `Querying orderbook for ${baseTokenAddress} and ${quoteTokenAddress} pair`
+      );
       const orderbookForTokenPair = await db.getOrderbook(baseTokenAddress, quoteTokenAddress);
       return res.status(201).json(orderbookForTokenPair);
     } catch (err) {

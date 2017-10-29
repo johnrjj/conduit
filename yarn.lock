@@ -91,6 +91,12 @@
     "@types/node" "*"
     "@types/pg-types" "*"
 
+"@types/redis@^2.8.1":
+  version "2.8.1"
+  resolved "https://registry.yarnpkg.com/@types/redis/-/redis-2.8.1.tgz#fa156200fe294542409c3da86855d57afe655432"
+  dependencies:
+    "@types/node" "*"
+
 "@types/serve-static@*":
   version "1.13.0"
   resolved "https://registry.yarnpkg.com/@types/serve-static/-/serve-static-1.13.0.tgz#2ef359d8d5982bc011a7a8fa36016e629e8b7635"
@@ -303,7 +309,7 @@ async-eventemitter@^0.2.2:
   dependencies:
     async "^2.4.0"
 
-"async-eventemitter@github:ahultgren/async-eventemitter#fa06e39e56786ba541c180061dbf2c0a5bbf951c":
+async-eventemitter@ahultgren/async-eventemitter#fa06e39e56786ba541c180061dbf2c0a5bbf951c:
   version "0.2.3"
   resolved "https://codeload.github.com/ahultgren/async-eventemitter/tar.gz/fa06e39e56786ba541c180061dbf2c0a5bbf951c"
   dependencies:

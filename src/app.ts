@@ -7,6 +7,7 @@ import * as expressWsFactory from 'express-ws';
 import * as ProviderEngine from 'web3-provider-engine';
 import * as FilterSubprovider from 'web3-provider-engine/subproviders/filters';
 import * as RpcSubprovider from 'web3-provider-engine/subproviders/rpc';
+import { createClient } from 'redis';
 import { Request, Response, NextFunction } from 'express';
 import { BigNumber } from 'bignumber.js';
 import { Pool, PoolConfig } from 'pg';
@@ -18,13 +19,16 @@ import {
   LogFillContractEventArgs,
   LogCancelContractEventArgs,
 } from '0x.js';
-import { RelayDatabase, PostgresRelayDatabase } from './db';
+import { RelayDatabase, PostgresRelayDatabase } from './relay';
 import v0ApiRouteFactory from './rest-api/routes';
 import { WebSocketNode } from './ws-api/websocket-node';
 import { RoutingError, BlockchainLogEvent, OrderbookOrder } from './types/core';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 import { populateTokenTable, populateTokenPairTable } from './test-data/generate-data';
 import config from './config';
+
+const sub = createClient();
+const pub = createClient();
 
 BigNumber.config({
   EXPONENTIAL_AT: 1000,
@@ -45,6 +49,9 @@ const createApp = async () => {
 
   const zeroEx = new ZeroEx(providerEngine);
 
+  const redisPublisher = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
+  const redisSubscriber = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
+
   let relayDatabase: RelayDatabase;
   try {
     const pool = config.DATABASE_URL
@@ -63,6 +70,8 @@ const createApp = async () => {
       tokenPairTableName: config.PG_TOKEN_PAIRS_TABLE_NAME || '',
       zeroEx,
       logger,
+      redisPublisher,
+      redisSubscriber,
     });
     await pool.connect();
     logger.log('info', `Connected to Postres Database`);
@@ -116,8 +125,8 @@ const createApp = async () => {
   logger.log('verbose', 'Configured REST endpoints');
 
   const wss = expressWs.getWss('/ws');
-  const websocketFeed = new WebSocketNode({ logger, wss });
-  (app as any).ws('/ws', (ws, req, next) => websocketFeed.acceptConnection(ws, req, next));
+  const webSocketNode = new WebSocketNode({ logger, wss, redisPublisher, redisSubscriber });
+  (app as any).ws('/ws', (ws, req, next) => webSocketNode.acceptConnection(ws, req, next));
   logger.log('verbose', 'Configured WebSocket endpoints');
 
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -141,7 +150,7 @@ const createApp = async () => {
       logger.log('verbose', 'LogFill received from 0x', ev);
       const logEvent = ev as BlockchainLogEvent;
       console.log(logEvent);
-      (logEvent as any).type = `Blockchain.${ev.event}`;
+      (logEvent as any).type = `blockchain:${ev.event}`;
       zeroExStreamWrapper.push(logEvent);
     })
     .then(cancelToken => {})
@@ -151,7 +160,7 @@ const createApp = async () => {
       logger.log('verbose', 'LogCancel received from 0x', ev);
       const logEvent = ev as BlockchainLogEvent;
       console.log(logEvent);
-      (logEvent as any).type = `Blockchain.${ev.event}`;
+      (logEvent as any).type = `blockchain:${ev.event}`;
       zeroExStreamWrapper.push(logEvent);
     })
     .then(cancelToken => {})
@@ -164,7 +173,7 @@ const createApp = async () => {
 
   // Websocket litens to all events emitted from Relay
   // (Eventually will be redis/kafka channels)
-  websocketFeed.pipe(relayDatabase);
+  relayDatabase.pipe(webSocketNode);
 
   return app;
 };

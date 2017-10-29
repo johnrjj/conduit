@@ -3,6 +3,7 @@ import { Duplex } from 'stream';
 import { Pool } from 'pg';
 import { SQL } from 'sql-template-strings';
 import { ZeroEx, SignedOrder, Token } from '0x.js';
+import { RedisClient } from 'redis';
 import { RelayDatabase, SignedOrderWithCurrentBalance } from './types';
 import { FeeApiRequest, FeeApiResponse, ApiOrderOptions, TokenPair } from '../rest-api/types';
 import { Message, OrderbookUpdate } from '../ws-api/types';
@@ -24,6 +25,8 @@ export interface PostgresOrderbookOptions {
   tokenPairTableName: string;
   zeroEx: ZeroEx;
   logger?: Logger;
+  redisSubscriber: RedisClient;
+  redisPublisher: RedisClient;
 }
 
 export interface PostgresOrderModel {
@@ -66,6 +69,8 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
   private tokenTableName: string;
   private tokenPairsTableName: string;
   private zeroEx: ZeroEx;
+  private redisSubscriber: RedisClient;
+  private redisPublisher: RedisClient;
   private logger?: Logger;
 
   constructor({
@@ -74,6 +79,8 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
     tokenTableName,
     tokenPairTableName,
     zeroEx,
+    redisPublisher,
+    redisSubscriber,
     logger,
   }: PostgresOrderbookOptions) {
     super({ objectMode: true, highWaterMark: 1024 });
@@ -82,6 +89,8 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
     this.tokenTableName = tokenTableName || 'tokens';
     this.tokenPairsTableName = tokenPairTableName || 'token_pairs';
     this.zeroEx = zeroEx;
+    this.redisPublisher = redisPublisher;
+    this.redisSubscriber = redisSubscriber;
     this.logger = logger;
 
     this.validatePostgresInstance();
@@ -192,25 +201,32 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
   }
 
   async postOrder(orderHash: string, signedOrder: SignedOrder): Promise<void> {
+    const takerTokenRemainingAmount = await this.getRemainingTakerAmount(
+      orderHash,
+      signedOrder.takerTokenAmount
+    );
+
     try {
-      const res = await this.pool.query(SQL`INSERT INTO 
-      "orders"(
-        "exchange_contract_address", 
-        "maker", 
-        "taker", 
-        "maker_token_address", 
-        "taker_token_address", 
-        "fee_recipient", 
-        "maker_token_amount", 
-        "taker_token_amount", 
-        "maker_fee",
-        "taker_fee", 
-        "expiration_unix_timestamp_sec", 
-        "salt", 
-        "ec_sig_v", 
-        "ec_sig_r", 
-        "ec_sig_s",
-        "order_hash"
+      const res = await this.pool.query(SQL`
+      INSERT INTO 
+      orders (
+        exchange_contract_address, 
+        maker, 
+        taker, 
+        maker_token_address, 
+        taker_token_address, 
+        fee_recipient, 
+        maker_token_amount, 
+        taker_token_amount, 
+        maker_fee,
+        taker_fee, 
+        expiration_unix_timestamp_sec, 
+        salt, 
+        ec_sig_v, 
+        ec_sig_r, 
+        ec_sig_s,
+        order_hash,
+        taker_token_remaining_amount
       ) 
       VALUES(
         ${signedOrder.exchangeContractAddress}, 
@@ -228,9 +244,9 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
         ${signedOrder.ecSignature.v}, 
         ${signedOrder.ecSignature.r}, 
         ${signedOrder.ecSignature.s},
-        ${orderHash}
-      ) 
-      `);
+        ${orderHash},
+        ${takerTokenRemainingAmount.toString()}
+      )`);
     } catch (err) {
       this.log('error', `Error inserting order ${orderHash} into postgres.`, err);
       throw err;
@@ -242,15 +258,11 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
       channel: 'orderbook',
       payload: signedOrder,
     };
-    this.emit('orderbook:update', event);
-  }
-
-  protected async getSnapshot() {
-    throw new Error('not yet implemented');
+    this.push(event);
   }
 
   async addTokenPair(baseTokenAddress, quoteTokenAddress) {
-    const insertRes = await this.pool.query(SQL`
+    await this.pool.query(SQL`
       INSERT 
       INTO    token_pairs
               (base_token, quote_token)
@@ -259,8 +271,8 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
   }
 
   async addToken(token: Token) {
-    // note: right now we're overloading precision with decimals, need to post issue on relayer spec asking for clarification
-    const res = await this.pool.query(SQL`
+    // note: right now we're overloading 'precision' column with 'decimals' value, need to post issue on relayer spec asking for clarification
+    await this.pool.query(SQL`
       INSERT 
       INTO    tokens
               (address, symbol, min_amount, max_amount, precision, name)
@@ -273,12 +285,12 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
     // push downstream
     this.push(msg);
     switch (msg.type) {
-      case 'Blockchain.LogFill':
+      case 'blockchain:LogFill':
         const blockchainFillLog = msg as BlockchainLogEvent;
         const payload = blockchainFillLog.args as OrderFillMessage;
         this.handleOrderFillMessage(blockchainFillLog.args as OrderFillMessage);
         break;
-      case 'Blockchain.LogCancel':
+      case 'blockchain:LogCancel':
         const blockchainCancelLog = msg as BlockchainLogEvent;
         this.log('debug', 'Doing nothing with Blockchain.LogCancel right now');
         break;
@@ -330,26 +342,23 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
       `Updated ${orderHash} in postgres database. Updated Taker Token Amount to ${takerTokenRemainingAmount.toString()}`
     );
 
-    // emit event
-    // throw new Error('finish this part...');
-    // const event: Message<OrderbookUpdate> = {
-    //   type: 'fill',
-    //   channel: 'orderbook',
-    //   payload: existingOrder,
-    // };
-    // this.emit('orderbook:update', event);
+    const event: Message<OrderbookUpdate> = {
+      type: 'fill',
+      channel: 'orderbook',
+      payload: existingOrder,
+    };
+    this.emit('orderbook:update', event);
   }
 
   private async updateRemainingTakerTokenAmountForOrderInDatabase(
     orderHash: string,
     remainingTakerTokenAmount: BigNumber
   ) {
-    const res = await this.pool.query(SQL`
+    await this.pool.query(SQL`
       UPDATE orders 
       SET taker_token_remaining_amount = ${remainingTakerTokenAmount.toString()}
       WHERE order_hash = ${orderHash};
     `);
-    console.log(res);
   }
 
   private async getRemainingTakerAmount(
