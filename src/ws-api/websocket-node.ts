@@ -83,10 +83,10 @@ export class WebSocketNode extends Duplex {
   private handleChannelSubscribeRequest(s: WebSocket, message: Message<SubscribeRequest>) {
     const { channel, type, payload } = message;
     const { baseTokenAddress, quoteTokenAddress, limit, snapshot } = payload;
-    console.log(`user has requested ${channel} subscription with the following details`);
-    console.log(`base token: ${baseTokenAddress}`);
-    console.log(`quote token: ${quoteTokenAddress}`);
-    console.log(`include snapshot: ${snapshot}, snapshot limit: ${limit}`);
+    this.log('verbose', `User has requested ${channel} subscription with the following details:`);
+    this.log('verbose', `\tBase token: ${baseTokenAddress}`);
+    this.log('verbose', `\tQuote token: ${quoteTokenAddress}`);
+    this.log('verbose', `\tInclude snapshot: ${snapshot}, Snapshot limit: ${limit}`);
 
     const channelHash = `${channel}.${type}:${baseTokenAddress}:${quoteTokenAddress}`;
     if (!this.channelSubscriptions.has(channelHash)) {

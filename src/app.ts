@@ -27,9 +27,6 @@ import { ConsoleLoggerFactory, Logger } from './util/logger';
 import { populateTokenTable, populateTokenPairTable } from './test-data/generate-data';
 import config from './config';
 
-const sub = createClient();
-const pub = createClient();
-
 BigNumber.config({
   EXPONENTIAL_AT: 1000,
 });
