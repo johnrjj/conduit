@@ -1,4 +1,5 @@
 import { SignedOrder } from '0x.js';
+import { SerializedSignedOrder } from '../../types';
 
 type MessageType = 'update' | 'snapshot' | 'fill';
 
@@ -24,7 +25,7 @@ export interface OrderbookSnapshot {
   asks: Array<SignedOrder>;
 }
 
-export type OrderbookUpdate = SignedOrder;
+export type OrderbookUpdate = SerializedSignedOrder;
 
 // NON STANDARD!! Relayer spec needs a way to communicate fill updates
 // need to request additional data...

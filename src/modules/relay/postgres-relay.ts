@@ -8,15 +8,13 @@ import { RelayDatabase, SignedOrderWithCurrentBalance } from './types';
 import { FeeApiRequest, FeeApiResponse, ApiOrderOptions, TokenPair } from '../rest-api/types';
 import { Message, OrderbookUpdate } from '../ws-api/types';
 import {
-  OrderbookOrder,
-  OrderState,
-  OrderHash,
   OrderbookPair,
-  OrderCancelMessage,
   OrderFillMessage,
+  OrderCancelMessage,
   BlockchainLogEvent,
-} from '../types/core';
-import { Logger } from '../util/logger';
+} from '../../types';
+import { serializeSignedOrder } from '../../util/order';
+import { Logger } from '../../util/logger';
 
 export interface PostgresOrderbookOptions {
   postgresPool: Pool;
@@ -176,10 +174,8 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
     try {
       const bidQueryRes = await bidsQueryResPromise;
       const asksQueryRes = await asksQueryResPromise;
-
       const bids = bidQueryRes.rows.map(this.formatOrderFromDb);
       const asks = asksQueryRes.rows.map(this.formatOrderFromDb);
-
       const orderbookPair = {
         bids,
         asks,
@@ -209,56 +205,77 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
     try {
       const res = await this.pool.query(SQL`
       INSERT INTO 
-      orders (
-        exchange_contract_address, 
-        maker, 
-        taker, 
-        maker_token_address, 
-        taker_token_address, 
-        fee_recipient, 
-        maker_token_amount, 
-        taker_token_amount, 
-        maker_fee,
-        taker_fee, 
-        expiration_unix_timestamp_sec, 
-        salt, 
-        ec_sig_v, 
-        ec_sig_r, 
-        ec_sig_s,
-        order_hash,
-        taker_token_remaining_amount
-      ) 
-      VALUES(
-        ${signedOrder.exchangeContractAddress}, 
-        ${signedOrder.maker}, 
-        ${signedOrder.taker}, 
-        ${signedOrder.makerTokenAddress}, 
-        ${signedOrder.takerTokenAddress}, 
-        ${signedOrder.feeRecipient}, 
-        ${signedOrder.makerTokenAmount.toString()}, 
-        ${signedOrder.takerTokenAmount.toString()}, 
-        ${signedOrder.makerFee.toString()}, 
-        ${signedOrder.takerFee.toString()}, 
-        ${signedOrder.expirationUnixTimestampSec.toString()}, 
-        ${signedOrder.salt.toString()}, 
-        ${signedOrder.ecSignature.v}, 
-        ${signedOrder.ecSignature.r}, 
-        ${signedOrder.ecSignature.s},
-        ${orderHash},
-        ${takerTokenRemainingAmount.toString()}
+        orders (
+          exchange_contract_address, 
+          maker, 
+          taker, 
+          maker_token_address, 
+          taker_token_address, 
+          fee_recipient, 
+          maker_token_amount, 
+          taker_token_amount, 
+          maker_fee,
+          taker_fee, 
+          expiration_unix_timestamp_sec, 
+          salt, 
+          ec_sig_v, 
+          ec_sig_r, 
+          ec_sig_s,
+          order_hash,
+          taker_token_remaining_amount
+        ) 
+        VALUES(
+          ${signedOrder.exchangeContractAddress}, 
+          ${signedOrder.maker}, 
+          ${signedOrder.taker}, 
+          ${signedOrder.makerTokenAddress}, 
+          ${signedOrder.takerTokenAddress}, 
+          ${signedOrder.feeRecipient}, 
+          ${signedOrder.makerTokenAmount.toString()}, 
+          ${signedOrder.takerTokenAmount.toString()}, 
+          ${signedOrder.makerFee.toString()}, 
+          ${signedOrder.takerFee.toString()}, 
+          ${signedOrder.expirationUnixTimestampSec.toString()}, 
+          ${signedOrder.salt.toString()}, 
+          ${signedOrder.ecSignature.v}, 
+          ${signedOrder.ecSignature.r}, 
+          ${signedOrder.ecSignature.s},
+          ${orderHash},
+          ${takerTokenRemainingAmount.toString()}
       )`);
     } catch (err) {
       this.log('error', `Error inserting order ${orderHash} into postgres.`, err);
       throw err;
     }
 
-    // emit event
-    const event: Message<OrderbookUpdate> = {
-      type: 'update',
-      channel: 'orderbook',
-      payload: signedOrder,
-    };
-    this.push(event);
+    try {
+      const channel = 'orderbook';
+      const type = 'update';
+      const payload = serializeSignedOrder(signedOrder);
+
+      // need correct baseToken:quoteToken to make sure we emit to the right channel
+      // i.e. emitting 'baseToken:quoteToken' is correct
+      // but emitting 'quoteToken:baseToken' is incorrect (no one is listening to that channel, nor should they be)
+      const { baseToken, quoteToken } = await this.getBaseTokenAndQuoteToken(
+        signedOrder.takerTokenAddress,
+        signedOrder.makerTokenAddress
+      );
+
+      const channelHash = `${channel}.${type}:${baseToken}:${quoteToken}`;
+      const event: Message<OrderbookUpdate> = {
+        channel,
+        type,
+        payload,
+      };
+      const eventString = JSON.stringify(event);
+
+      this.log('verbose', `Publishing event to ${channelHash}`);
+      this.redisPublisher.publish(channelHash, eventString);
+
+      // this.push(event);
+    } catch (err) {
+      this.log('error', 'Error publishing event to redis', err);
+    }
   }
 
   async addTokenPair(baseTokenAddress, quoteTokenAddress) {
@@ -306,6 +323,26 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
 
   _read(size: number): void {}
 
+  private async getBaseTokenAndQuoteToken(
+    takerTokenAddress,
+    makerTokenAddress
+  ): Promise<{ baseToken: string; quoteToken: string }> {
+    const res = await this.pool.query(SQL`
+    SELECT base_token, quote_token
+    FROM token_pairs
+    WHERE (base_token = ${takerTokenAddress} AND quote_token = ${makerTokenAddress})
+       OR (base_token = ${makerTokenAddress} AND quote_token = ${takerTokenAddress})
+    `);
+    if (res.rowCount < 1) {
+      throw Error('Could not find token pair');
+    }
+    const { base_token, quote_token } = res.rows[0];
+    return {
+      baseToken: base_token,
+      quoteToken: quote_token,
+    };
+  }
+
   private async handleOrderFillMessage(fillMessage: OrderFillMessage) {
     const { orderHash, filledMakerTokenAmount, filledTakerTokenAmount } = fillMessage;
     this.log(
@@ -334,20 +371,18 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
       `Order ${orderHash} has ${takerTokenRemainingAmount.toString()} remaining to fill`
     );
 
-    const state = takerTokenRemainingAmount.greaterThan(0) ? OrderState.OPEN : OrderState.CLOSED;
-
     this.updateRemainingTakerTokenAmountForOrderInDatabase(orderHash, takerTokenRemainingAmount);
     this.log(
       'info',
       `Updated ${orderHash} in postgres database. Updated Taker Token Amount to ${takerTokenRemainingAmount.toString()}`
     );
 
-    const event: Message<OrderbookUpdate> = {
-      type: 'fill',
-      channel: 'orderbook',
-      payload: existingOrder,
-    };
-    this.emit('orderbook:update', event);
+    // const event: Message<OrderbookUpdate> = {
+    //   type: 'fill',
+    //   channel: 'orderbook',
+    //   payload: existingOrder,
+    // };
+    // this.emit('orderbook:update', event);
   }
 
   private async updateRemainingTakerTokenAmountForOrderInDatabase(

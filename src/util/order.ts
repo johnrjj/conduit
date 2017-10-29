@@ -1,5 +1,5 @@
 import { SignedOrder } from '0x.js';
-import { OrderbookOrder, SerializedSignedOrder, SerializedOrderbookOrder } from '../types/core';
+import { SerializedSignedOrder } from '../types';
 
 const serializeSignedOrder = (signedOrder: SignedOrder): SerializedSignedOrder => {
   const serializedSignedOrder = {
@@ -20,13 +20,4 @@ const serializeSignedOrder = (signedOrder: SignedOrder): SerializedSignedOrder =
   return serializedSignedOrder;
 };
 
-const serializeOrderbookOrder = (orderbookOrder: OrderbookOrder): SerializedOrderbookOrder => {
-  const serializedOrderbookOrder: SerializedOrderbookOrder = {
-    signedOrder: serializeSignedOrder(orderbookOrder.signedOrder),
-    state: orderbookOrder.state,
-    remainingTakerTokenAmount: orderbookOrder.remainingTakerTokenAmount.toString(),
-  };
-  return serializedOrderbookOrder;
-};
-
-export { serializeSignedOrder, serializeOrderbookOrder };
+export { serializeSignedOrder };

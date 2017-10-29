@@ -1,5 +1,5 @@
 import { ZeroEx, Token } from '0x.js';
-import { PostgresRelayDatabase } from '../relay/postgres-relay';
+import { PostgresRelayDatabase } from '../modules/relay/postgres-relay';
 
 // O(n^2)
 const pairTokens = (arr: Array<Token>): Array<Array<string>> => {

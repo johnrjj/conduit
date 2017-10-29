@@ -19,14 +19,13 @@ import {
   LogFillContractEventArgs,
   LogCancelContractEventArgs,
 } from '0x.js';
-import { RelayDatabase, PostgresRelayDatabase } from './relay';
-import v0ApiRouteFactory from './rest-api/routes';
-import { WebSocketNode } from './ws-api/websocket-node';
-import { RoutingError, BlockchainLogEvent, OrderbookOrder } from './types/core';
+import { RelayDatabase, PostgresRelayDatabase } from './modules/relay';
+import v0ApiRouteFactory from './modules/rest-api/routes';
+import { WebSocketNode } from './modules/ws-api/websocket-node';
+import { RoutingError, BlockchainLogEvent } from './types';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
-import { populateTokenTable, populateTokenPairTable } from './test-data/generate-data';
+import { populateTokenTable, populateTokenPairTable } from './sample-data/generate-data';
 import config from './config';
-
 BigNumber.config({
   EXPONENTIAL_AT: 1000,
 });
@@ -48,6 +47,7 @@ const createApp = async () => {
 
   const redisPublisher = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
   const redisSubscriber = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
+  logger.log('debug', 'Connected to Redis instance');
 
   let relayDatabase: RelayDatabase;
   try {
@@ -71,17 +71,17 @@ const createApp = async () => {
       redisSubscriber,
     });
     await pool.connect();
-    logger.log('info', `Connected to Postres Database`);
+    logger.log('debug', `Connected to Postres database`);
 
     if (config.PG_POPULATE_DATABASE) {
-      logger.log('info', 'Populating postgres database with data (First time config)');
+      logger.log('debug', 'Populating Postgres database with data (First time config)');
       // soft fail, will continue if populates fail.
       try {
         const tokenInsertRes = await populateTokenTable(
           relayDatabase as PostgresRelayDatabase,
           zeroEx
         );
-        logger.log('debug', 'Populated token table successfully');
+        logger.log('debug', `Populated token table (${config.PG_TOKENS_TABLE_NAME}) successfully`);
       } catch (e) {
         logger.log(
           'error',
@@ -94,7 +94,10 @@ const createApp = async () => {
           relayDatabase as PostgresRelayDatabase,
           zeroEx
         );
-        logger.log('debug', 'Populated token pair table successfully');
+        logger.log(
+          'debug',
+          `Populated token pair table (${config.PG_TOKEN_PAIRS_TABLE_NAME}) successfully`
+        );
       } catch (e) {
         logger.log(
           'error',
@@ -167,10 +170,6 @@ const createApp = async () => {
   // Relay Database gets all events from ZeroEx Stream
   // (Eventually will be redis/kafka channels)
   zeroExStreamWrapper.pipe(relayDatabase);
-
-  // Websocket litens to all events emitted from Relay
-  // (Eventually will be redis/kafka channels)
-  relayDatabase.pipe(webSocketNode);
 
   return app;
 };

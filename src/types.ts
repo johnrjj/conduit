@@ -8,15 +8,6 @@ import {
   ECSignature,
 } from '0x.js';
 
-export enum OrderState {
-  'OPEN' = 'OPEN',
-  'EXPIRED' = 'EXPIRED',
-  'CLOSED' = 'CLOSED',
-  'UNFUNDED' = 'UNFUNDED',
-}
-
-export type OrderHash = string;
-
 export interface SerializedOrder {
   exchangeContractAddress: string;
   maker: string;
@@ -36,22 +27,6 @@ export interface SerializedSignedOrder extends SerializedOrder {
   ecSignature: ECSignature;
 }
 
-export interface OrderbookOrder {
-  signedOrder: SignedOrder;
-  state: OrderState;
-  remainingTakerTokenAmount: BigNumber;
-}
-
-export interface SerializedOrderbookOrder {
-  signedOrder: SerializedSignedOrder;
-  state: OrderState;
-  remainingTakerTokenAmount: string;
-}
-
-export class RoutingError extends Error {
-  status?: number;
-}
-
 export type BlockchainLogEvent = LogEvent<
   LogFillContractEventArgs | LogCancelContractEventArgs | LogErrorContractEventArgs
 >;
@@ -62,4 +37,8 @@ export type OrderCancelMessage = LogCancelContractEventArgs;
 export interface OrderbookPair {
   bids: Array<SignedOrder>;
   asks: Array<SignedOrder>;
+}
+
+export class RoutingError extends Error {
+  status?: number;
 }

@@ -1,7 +1,7 @@
 import { Duplex } from 'stream';
 import { SignedOrder } from '0x.js';
 import { BigNumber } from 'bignumber.js';
-import { OrderbookOrder, OrderbookPair } from '../types/core';
+import { OrderbookPair } from '../../types';
 import { FeeApiRequest, FeeApiResponse, ApiOrderOptions, TokenPair } from '../rest-api/types';
 
 // signedorder superset, need more guidance from zeroex about order metadata
