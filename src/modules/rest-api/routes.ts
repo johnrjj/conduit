@@ -1,6 +1,6 @@
 import * as bodyParser from 'body-parser';
 import { Router } from 'express';
-import { ZeroEx, Token, SignedOrder as ZeroExSignedOrder } from '0x.js';
+import { ZeroEx } from '0x.js';
 import { mapOrderApiPayloadToSignedOrder, mapZeroExPortalOrderJSONToSignedOrder } from './adapter';
 import { RelayDatabase } from '../relay';
 import { validateEndpointSignedOrderBySchema } from '../../util/validate';

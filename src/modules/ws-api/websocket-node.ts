@@ -1,38 +1,40 @@
 import * as WebSocket from 'ws';
-import { EventEmitter } from 'events';
 import { Request, NextFunction } from 'express';
 import { RedisClient } from 'redis';
-import { Message, SubscribeRequest, OrderbookSnapshot, AllMessageTypes } from './types';
+import { Message, SubscribeRequest } from './types';
+import { RelayDatabase } from '../relay';
 import { Logger } from '../../util/logger';
 
 export class WebSocketNode {
   private wsServerRef: WebSocket.Server;
-  private subscriptions: WeakMap<WebSocket, Array<string>>;
   private channelSubscriptions: Map<string, Set<WebSocket>>;
   private redisSubscriber: RedisClient;
   private redisPublisher: RedisClient;
+  private relay: RelayDatabase;
   private logger?: Logger;
 
   constructor({
     wss,
     redisPublisher,
     redisSubscriber,
+    relay,
     logger,
   }: {
     wss: WebSocket.Server;
     redisSubscriber: RedisClient;
     redisPublisher: RedisClient;
+    relay: RelayDatabase;
     logger?: Logger;
   }) {
     this.wsServerRef = wss;
     this.redisSubscriber = redisSubscriber;
     this.redisPublisher = redisPublisher;
+    this.relay = relay;
     this.logger = logger;
     this.channelSubscriptions = new Map();
 
     this.redisSubscriber.on('message', (channel, message) => {
-      console.log(channel, message);
-      this.log('verobse', `Redis message received from websocket server: ${channel}`, message);
+      this.log('verbose', `WebSocket server received redis message: ${channel}`, message);
       if (!this.channelSubscriptions.has(channel)) {
         return;
       }
@@ -44,18 +46,18 @@ export class WebSocketNode {
     });
   }
 
-  public acceptConnection(ws: WebSocket, req: Request, next: NextFunction): void {
+  public async acceptConnection(ws: WebSocket, req: Request, next: NextFunction): Promise<void> {
     try {
       this.log('debug', `WebSocket connection connected and registered`);
-      ws.on('close', n => this.removeConnection(ws));
-      ws.on('message', message => {
+      ws.on('close', n => this.removeClientWebSocketConnection(ws));
+      ws.on('message', async message => {
         this.log('verbose', 'WebSocket node received message from client', message);
         const data = JSON.parse(message.toString());
         switch (data.type) {
           case 'subscribe':
             this.log('debug', `Subscribe request received`);
             const subscribeRequest = data as Message<SubscribeRequest>;
-            this.handleChannelSubscribeRequest(ws, subscribeRequest);
+            await this.handleChannelSubscribeRequest(ws, subscribeRequest);
             break;
           default:
             this.log(
@@ -71,7 +73,7 @@ export class WebSocketNode {
     }
   }
 
-  private handleChannelSubscribeRequest(ws: WebSocket, message: Message<SubscribeRequest>) {
+  private async handleChannelSubscribeRequest(ws: WebSocket, message: Message<SubscribeRequest>) {
     const { channel, type, payload } = message;
     const { baseTokenAddress, quoteTokenAddress, limit, snapshot } = payload;
     this.log('verbose', `User has requested ${channel} subscription with the following details:`);
@@ -79,14 +81,20 @@ export class WebSocketNode {
     this.log('verbose', `\tQuote token: ${quoteTokenAddress}`);
     this.log('verbose', `\tInclude snapshot: ${snapshot}, Snapshot limit: ${limit}`);
 
-    const subscriptionChannelHash = `${channel}.${type}:${baseTokenAddress}:${quoteTokenAddress}`;
     const updateChannelHash = `${channel}.update:${baseTokenAddress}:${quoteTokenAddress}`;
+    this.addClientChannelSubscription(ws, updateChannelHash);
 
-    this.addSubscription(ws, subscriptionChannelHash);
-    this.addSubscription(ws, updateChannelHash);
+    // Temporary - will use redis to communicate/request to snapshot relay db
+    // Just getting a feel for it, GDAX does it a bit differently (REST call for snapshot, queue up ws messages)
+    if (snapshot) {
+      const snapshotChannelHash = `${channel}.snapshot:${baseTokenAddress}:${quoteTokenAddress}`;
+      this.addClientChannelSubscription(ws, snapshotChannelHash);
+      const orderbook = await this.relay.getOrderbook(baseTokenAddress, quoteTokenAddress);
+      this.redisPublisher.publish(snapshotChannelHash, JSON.stringify(orderbook));
+    }
   }
 
-  private addSubscription(ws: WebSocket, channelToSubscribeTo: string) {
+  private addClientChannelSubscription(ws: WebSocket, channelToSubscribeTo: string) {
     if (!this.channelSubscriptions.has(channelToSubscribeTo)) {
       this.log('debug', `First client to subscribe to ${channelToSubscribeTo}, setting up channel`);
       this.channelSubscriptions.set(channelToSubscribeTo, new Set<WebSocket>());
@@ -102,24 +110,35 @@ export class WebSocketNode {
     this.log('debug', `WebSocket client subscribed to ${channelToSubscribeTo}`);
   }
 
-  private removeConnection(ws: WebSocket) {
-    const channelsToRemove: Array<string> = [];
-    this.channelSubscriptions.forEach((subscriptions, channel) => {
-      if (subscriptions.has(ws)) {
-        this.log('verbose', `Unregistering disconnecting websocket from ${channel}`);
-        subscriptions.delete(ws);
+  private removeClientWebSocketConnection(ws: WebSocket) {
+    this.channelSubscriptions.forEach((channelSubscribers, channel) => {
+      if (channelSubscribers.has(ws)) {
+        this.removeClientChannelSubscription(ws, channel);
       }
-      if (subscriptions.size === 0) {
-        // no client is listening to this, tell the websocket server to stop listening
-        // but we don't wanna delete while looping (bad side effects)
-        channelsToRemove.push(channel);
+    });
+    this.pruneChannels();
+    this.log('debug', 'Websocket disconnected, unregistered subscriptions');
+  }
+
+  private removeClientChannelSubscription(ws, channelName) {
+    const channelSubscribers = this.channelSubscriptions.get(channelName);
+    if (channelSubscribers && channelSubscribers.has(ws)) {
+      this.log('verbose', `Unregistering websocket from ${channelName}`);
+      channelSubscribers.delete(ws);
+    }
+  }
+
+  private pruneChannels() {
+    const channelsToRemove: Array<string> = [];
+    this.channelSubscriptions.forEach((subscribers, channelName) => {
+      if (subscribers.size === 0) {
+        channelsToRemove.push(channelName);
       }
     });
     channelsToRemove.forEach(channel => {
       this.channelSubscriptions.delete(channel);
       this.log('verbose', `WebSocket server no longer listening to ${channel}`);
     });
-    this.log('debug', 'Websocket disconnected, unregistered subscriptions');
   }
 
   private log(level: string, message: string, meta?: any) {

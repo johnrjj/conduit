@@ -1,5 +1,5 @@
 import { ZeroEx, Token } from '0x.js';
-import { PostgresRelayDatabase } from '../modules/relay/postgres-relay';
+import { RelayDatabase } from '../modules/relay';
 
 // O(n^2)
 const pairTokens = (arr: Array<Token>): Array<Array<string>> => {
@@ -18,12 +18,12 @@ const generateTokens = async (zeroEx: ZeroEx) => await zeroEx.tokenRegistry.getT
 
 const generateTokenPairsFromTokens = (tokens: Array<Token>) => pairTokens(tokens);
 
-const populateTokenTable = async (db: PostgresRelayDatabase, zeroEx: ZeroEx) => {
+const populateTokenTable = async (db: RelayDatabase, zeroEx: ZeroEx) => {
   const tokens = await generateTokens(zeroEx);
   await Promise.all(tokens.map(db.addToken.bind(db)));
 };
 
-const populateTokenPairTable = async (db: PostgresRelayDatabase, zeroEx: ZeroEx) => {
+const populateTokenPairTable = async (db: RelayDatabase, zeroEx: ZeroEx) => {
   const tokens = await generateTokens(zeroEx);
   const tokenPairs = generateTokenPairsFromTokens(tokens);
   await Promise.all(
@@ -31,4 +31,27 @@ const populateTokenPairTable = async (db: PostgresRelayDatabase, zeroEx: ZeroEx)
   );
 };
 
-export { generateTokens, generateTokenPairsFromTokens, populateTokenTable, populateTokenPairTable };
+const populateDatabase = async (relayDatabase, zeroEx, logger) => {
+  logger.log('debug', 'Populating Postgres database with data (First time config)');
+  // soft fail, will continue if populates fail.
+  try {
+    const tokenInsertRes = await populateTokenTable(relayDatabase as RelayDatabase, zeroEx);
+    logger.log('debug', `Populated token table successfully`);
+  } catch (e) {
+    logger.log('error', `Error inserting tokens into postgres token table`, e);
+  }
+  try {
+    const tokenPairInsertRes = await populateTokenPairTable(relayDatabase as RelayDatabase, zeroEx);
+    logger.log('debug', `Populated token pair table successfully`);
+  } catch (e) {
+    logger.log('error', `Error inserting tokenpairs into postgres token pair table`, e);
+  }
+};
+
+export {
+  generateTokens,
+  generateTokenPairsFromTokens,
+  populateTokenTable,
+  populateTokenPairTable,
+  populateDatabase,
+};

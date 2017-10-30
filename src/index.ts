@@ -1,6 +1,6 @@
 import createApp from './app';
 import config from './config';
-import { ConsoleLoggerFactory, Logger } from './util/logger';
+import { ConsoleLoggerFactory } from './util/logger';
 
 const PORT = config.PORT;
 const logger = ConsoleLoggerFactory({ level: config.LOG_LEVEL });
@@ -28,7 +28,7 @@ const start = async () => {
     const app = await createApp();
     app.listen(PORT), logger.log('info', `Conduit started on port ${PORT}`);
   } catch (e) {
-    console.error('Error starting app', e);
+    logger.error('Error starting app', e);
   }
 };
 

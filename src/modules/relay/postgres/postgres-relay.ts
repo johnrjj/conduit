@@ -4,62 +4,18 @@ import { Pool } from 'pg';
 import { SQL } from 'sql-template-strings';
 import { ZeroEx, SignedOrder, Token } from '0x.js';
 import { RedisClient } from 'redis';
-import { RelayDatabase, SignedOrderWithCurrentBalance } from './types';
-import { FeeApiRequest, FeeApiResponse, ApiOrderOptions, TokenPair } from '../rest-api/types';
-import { Message, OrderbookUpdate } from '../ws-api/types';
+import { PostgresRelayOptions, PostgresOrderModel } from './types';
+import { RelayDatabase, SignedOrderWithCurrentBalance } from '../types';
+import { FeeApiRequest, FeeApiResponse, ApiOrderOptions, TokenPair } from '../../rest-api/types';
+import { Message, OrderbookUpdate } from '../../ws-api/types';
 import {
   OrderbookPair,
   OrderFillMessage,
   OrderCancelMessage,
   BlockchainLogEvent,
-} from '../../types';
-import { serializeSignedOrder } from '../../util/order';
-import { Logger } from '../../util/logger';
-
-export interface PostgresOrderbookOptions {
-  postgresPool: Pool;
-  orderTableName: string;
-  tokenTableName: string;
-  tokenPairTableName: string;
-  zeroEx: ZeroEx;
-  logger?: Logger;
-  redisSubscriber: RedisClient;
-  redisPublisher: RedisClient;
-}
-
-export interface PostgresOrderModel {
-  exchange_contract_address: string;
-  maker: string;
-  taker: string;
-  maker_token_address: string;
-  taker_token_address: string;
-  fee_recipient: string;
-  maker_token_amount: string;
-  taker_token_amount: string;
-  maker_fee: string;
-  taker_fee: string;
-  expiration_unix_timestamp_sec: string;
-  salt: string;
-  ec_sig_v: string;
-  ec_sig_r: string;
-  ec_sig_s: string;
-  order_hash: string;
-  taker_token_remaining_amount: string;
-}
-
-export interface PostgresTokenPairsModel {
-  base_token: string;
-  quote_token: string;
-}
-
-export interface PostgresTokenModel {
-  address: string;
-  symbol: string; // ex: 'ZRX'
-  name: string; // ex: 'ZeroEx Token'
-  min_amount: string;
-  max_amount: string;
-  precision: number;
-}
+} from '../../../types';
+import { serializeSignedOrder } from '../../../util/order';
+import { Logger } from '../../../util/logger';
 
 export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
   private pool: Pool;
@@ -80,7 +36,7 @@ export class PostgresRelayDatabase extends Duplex implements RelayDatabase {
     redisPublisher,
     redisSubscriber,
     logger,
-  }: PostgresOrderbookOptions) {
+  }: PostgresRelayOptions) {
     super({ objectMode: true, highWaterMark: 1024 });
     this.pool = postgresPool;
     this.orderTableName = orderTableName || 'orders';

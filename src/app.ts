@@ -2,7 +2,6 @@ import * as express from 'express';
 import * as expressLogger from 'morgan';
 import * as helmet from 'helmet';
 import * as cors from 'cors';
-import * as WebSocket from 'ws';
 import * as expressWsFactory from 'express-ws';
 import * as ProviderEngine from 'web3-provider-engine';
 import * as FilterSubprovider from 'web3-provider-engine/subproviders/filters';
@@ -10,21 +9,15 @@ import * as RpcSubprovider from 'web3-provider-engine/subproviders/rpc';
 import { createClient } from 'redis';
 import { Request, Response, NextFunction } from 'express';
 import { BigNumber } from 'bignumber.js';
-import { Pool, PoolConfig } from 'pg';
-import { Readable, PassThrough } from 'stream';
-import {
-  ZeroEx,
-  ExchangeEvents,
-  Web3Provider,
-  LogFillContractEventArgs,
-  LogCancelContractEventArgs,
-} from '0x.js';
+import { Pool } from 'pg';
+import { PassThrough } from 'stream';
+import { ZeroEx, ExchangeEvents } from '0x.js';
 import { RelayDatabase, PostgresRelayDatabase } from './modules/relay';
 import v0ApiRouteFactory from './modules/rest-api/routes';
 import { WebSocketNode } from './modules/ws-api/websocket-node';
 import { RoutingError, BlockchainLogEvent } from './types';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
-import { populateTokenTable, populateTokenPairTable } from './sample-data/generate-data';
+import { populateDatabase } from './sample-data/generate-data';
 import config from './config';
 BigNumber.config({
   EXPONENTIAL_AT: 1000,
@@ -61,50 +54,19 @@ const createApp = async () => {
           port: config.PGPORT,
         });
     relayDatabase = new PostgresRelayDatabase({
-      postgresPool: pool || '',
-      orderTableName: config.PG_ORDERS_TABLE_NAME || '',
-      tokenTableName: config.PG_TOKENS_TABLE_NAME || '',
-      tokenPairTableName: config.PG_TOKEN_PAIRS_TABLE_NAME || '',
+      postgresPool: pool,
+      orderTableName: config.PG_ORDERS_TABLE_NAME || 'orders',
+      tokenTableName: config.PG_TOKENS_TABLE_NAME || 'tokens',
+      tokenPairTableName: config.PG_TOKEN_PAIRS_TABLE_NAME || 'token_pairs',
       zeroEx,
       logger,
       redisPublisher,
       redisSubscriber,
     });
     await pool.connect();
-    logger.log('debug', `Connected to Postres database`);
-
+    logger.log('debug', `Connected to Postgres database`);
     if (config.PG_POPULATE_DATABASE) {
-      logger.log('debug', 'Populating Postgres database with data (First time config)');
-      // soft fail, will continue if populates fail.
-      try {
-        const tokenInsertRes = await populateTokenTable(
-          relayDatabase as PostgresRelayDatabase,
-          zeroEx
-        );
-        logger.log('debug', `Populated token table (${config.PG_TOKENS_TABLE_NAME}) successfully`);
-      } catch (e) {
-        logger.log(
-          'error',
-          `Error inserting tokens into postgres token table ${config.PG_TOKENS_TABLE_NAME}`,
-          e
-        );
-      }
-      try {
-        const tokenPairInsertRes = await populateTokenPairTable(
-          relayDatabase as PostgresRelayDatabase,
-          zeroEx
-        );
-        logger.log(
-          'debug',
-          `Populated token pair table (${config.PG_TOKEN_PAIRS_TABLE_NAME}) successfully`
-        );
-      } catch (e) {
-        logger.log(
-          'error',
-          `Error inserting tokenpairs into postgres token pair table ${config.PG_TOKEN_PAIRS_TABLE_NAME}`,
-          e
-        );
-      }
+      populateDatabase(relayDatabase, zeroEx, logger);
     }
   } catch (e) {
     logger.log('error', 'Error connecting to Postgres', e);
@@ -120,12 +82,18 @@ const createApp = async () => {
   app.use(cors());
 
   app.get('/healthcheck', (req, res) => res.sendStatus(200));
-
+  app.get('/', (req, res) => res.send('Welcome to the Conduit Relay API'));
   app.use('/api/v0', v0ApiRouteFactory(relayDatabase, zeroEx, logger));
   logger.log('verbose', 'Configured REST endpoints');
 
   const wss = expressWs.getWss('/ws');
-  const webSocketNode = new WebSocketNode({ logger, wss, redisPublisher, redisSubscriber });
+  const webSocketNode = new WebSocketNode({
+    logger,
+    wss,
+    redisPublisher,
+    redisSubscriber,
+    relay: relayDatabase,
+  });
   (app as any).ws('/ws', (ws, req, next) => webSocketNode.acceptConnection(ws, req, next));
   logger.log('verbose', 'Configured WebSocket endpoints');
 
@@ -144,31 +112,28 @@ const createApp = async () => {
     objectMode: true,
     highWaterMark: 1024,
   });
-
   zeroEx.exchange
     .subscribeAsync(ExchangeEvents.LogFill, {}, ev => {
       logger.log('verbose', 'LogFill received from 0x', ev);
       const logEvent = ev as BlockchainLogEvent;
-      console.log(logEvent);
       (logEvent as any).type = `blockchain:${ev.event}`;
       zeroExStreamWrapper.push(logEvent);
     })
     .then(cancelToken => {})
-    .catch(e => logger.error(e));
+    .catch(e => logger.log('error', 'Error subscribing to 0x log fills', e));
   zeroEx.exchange
     .subscribeAsync(ExchangeEvents.LogCancel, {}, ev => {
       logger.log('verbose', 'LogCancel received from 0x', ev);
       const logEvent = ev as BlockchainLogEvent;
-      console.log(logEvent);
       (logEvent as any).type = `blockchain:${ev.event}`;
       zeroExStreamWrapper.push(logEvent);
     })
     .then(cancelToken => {})
-    .catch(e => logger.error(e));
+    .catch(e => logger.log('error', 'Error subscribing to 0x log cancels', e));
   logger.log('verbose', 'Subscribed to ZeroEx Blockchain Fill and Cancel Log events');
 
   // Relay Database gets all events from ZeroEx Stream
-  // (Eventually will be redis/kafka channels)
+  // (Eventually will need to be put into a queue to scale)
   zeroExStreamWrapper.pipe(relayDatabase);
 
   return app;

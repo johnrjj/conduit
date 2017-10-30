@@ -1,7 +1,6 @@
 import { BigNumber } from 'bignumber.js';
-import { ZeroEx, SignedOrder } from '0x.js';
+import { SignedOrder } from '0x.js';
 import { OrderPayload, ZeroExPortalOrderJSON } from './types';
-import { serializeSignedOrder } from '../../util/order';
 
 const mapOrderApiPayloadToSignedOrder = (payload: OrderPayload): SignedOrder => {
   const order = payload;
