@@ -1,5 +1,5 @@
 import { SignedOrder } from '0x.js';
-import { SerializedSignedOrder } from '../../types';
+import { SerializedSignedOrder, SerializedSignedOrderWithCurrentBalance } from '../../types';
 
 type MessageType = 'update' | 'snapshot' | 'fill';
 
@@ -29,9 +29,12 @@ export type OrderbookUpdate = SerializedSignedOrder;
 
 // NON STANDARD!! Relayer spec needs a way to communicate fill updates
 // need to request additional data...
-export type OrderbookFill = SignedOrder;
+export interface OrderbookFill extends SerializedSignedOrderWithCurrentBalance {
+  filledMakerTokenAmount: string;
+  filledTakerTokenAmount: string;
+}
 
-export type AllMessageTypes =
+export type AvailableMessageTypes =
   | Message<SubscribeRequest>
   | Message<OrderbookSnapshot>
   | Message<OrderbookUpdate>

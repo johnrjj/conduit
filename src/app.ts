@@ -12,7 +12,7 @@ import { BigNumber } from 'bignumber.js';
 import { Pool } from 'pg';
 import { PassThrough } from 'stream';
 import { ZeroEx, ExchangeEvents } from '0x.js';
-import { RelayDatabase, PostgresRelayDatabase } from './modules/relay';
+import { Relay, PostgresRelay } from './modules/relay';
 import v0ApiRouteFactory from './modules/rest-api/routes';
 import { WebSocketNode } from './modules/ws-api/websocket-node';
 import { RoutingError, BlockchainLogEvent } from './types';
@@ -42,7 +42,7 @@ const createApp = async () => {
   const redisSubscriber = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
   logger.log('debug', 'Connected to Redis instance');
 
-  let relayDatabase: RelayDatabase;
+  let relayClient: Relay;
   try {
     const pool = config.DATABASE_URL
       ? new Pool({ connectionString: config.DATABASE_URL })
@@ -53,7 +53,7 @@ const createApp = async () => {
           database: config.PGDATABASE,
           port: config.PGPORT,
         });
-    relayDatabase = new PostgresRelayDatabase({
+    relayClient = new PostgresRelay({
       postgresPool: pool,
       orderTableName: config.PG_ORDERS_TABLE_NAME || 'orders',
       tokenTableName: config.PG_TOKENS_TABLE_NAME || 'tokens',
@@ -66,7 +66,7 @@ const createApp = async () => {
     await pool.connect();
     logger.log('debug', `Connected to Postgres database`);
     if (config.PG_POPULATE_DATABASE) {
-      populateDatabase(relayDatabase, zeroEx, logger);
+      populateDatabase(relayClient, zeroEx, logger);
     }
   } catch (e) {
     logger.log('error', 'Error connecting to Postgres', e);
@@ -83,7 +83,7 @@ const createApp = async () => {
 
   app.get('/healthcheck', (req, res) => res.sendStatus(200));
   app.get('/', (req, res) => res.send('Welcome to the Conduit Relay API'));
-  app.use('/api/v0', v0ApiRouteFactory(relayDatabase, zeroEx, logger));
+  app.use('/api/v0', v0ApiRouteFactory(relayClient, zeroEx, logger));
   logger.log('verbose', 'Configured REST endpoints');
 
   const wss = expressWs.getWss('/ws');
@@ -92,7 +92,7 @@ const createApp = async () => {
     wss,
     redisPublisher,
     redisSubscriber,
-    relay: relayDatabase,
+    relay: relayClient,
   });
   (app as any).ws('/ws', (ws, req, next) => webSocketNode.acceptConnection(ws, req, next));
   logger.log('verbose', 'Configured WebSocket endpoints');
@@ -108,6 +108,7 @@ const createApp = async () => {
     res.json({ ...error });
   });
 
+  // todo: make this a module, pushing to a queue
   const zeroExStreamWrapper = new PassThrough({
     objectMode: true,
     highWaterMark: 1024,
@@ -116,7 +117,7 @@ const createApp = async () => {
     .subscribeAsync(ExchangeEvents.LogFill, {}, ev => {
       logger.log('verbose', 'LogFill received from 0x', ev);
       const logEvent = ev as BlockchainLogEvent;
-      (logEvent as any).type = `blockchain:${ev.event}`;
+      (logEvent as any).type = `Blockchain.${ev.event}`;
       zeroExStreamWrapper.push(logEvent);
     })
     .then(cancelToken => {})
@@ -125,7 +126,7 @@ const createApp = async () => {
     .subscribeAsync(ExchangeEvents.LogCancel, {}, ev => {
       logger.log('verbose', 'LogCancel received from 0x', ev);
       const logEvent = ev as BlockchainLogEvent;
-      (logEvent as any).type = `blockchain:${ev.event}`;
+      (logEvent as any).type = `Blockchain.${ev.event}`;
       zeroExStreamWrapper.push(logEvent);
     })
     .then(cancelToken => {})
@@ -134,7 +135,7 @@ const createApp = async () => {
 
   // Relay Database gets all events from ZeroEx Stream
   // (Eventually will need to be put into a queue to scale)
-  zeroExStreamWrapper.pipe(relayDatabase);
+  zeroExStreamWrapper.pipe(relayClient);
 
   return app;
 };

@@ -1,4 +1,4 @@
-import { RelayDatabase } from './types';
-import { PostgresRelayDatabase } from './postgres/postgres-relay';
+import { Relay } from './types';
+import { PostgresRelay } from './postgres/postgres-relay';
 
-export { RelayDatabase, PostgresRelayDatabase };
+export { Relay, PostgresRelay };
