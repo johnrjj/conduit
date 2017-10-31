@@ -51,8 +51,6 @@ export class PostgresRelay extends Duplex implements Relay {
     this.redisPublisher = redisPublisher;
     this.redisSubscriber = redisSubscriber;
     this.logger = logger;
-
-    this.validatePostgresInstance();
   }
 
   async getTokenPairs(): Promise<Array<TokenPair>> {
@@ -156,7 +154,7 @@ export class PostgresRelay extends Duplex implements Relay {
     return freeFee;
   }
 
-  async postOrder(orderHash: string, signedOrder: SignedOrder): Promise<void> {
+  async postOrder(orderHash: string, signedOrder: SignedOrder): Promise<SignedOrder> {
     const takerTokenRemainingAmount = await this.getRemainingTakerAmount(
       orderHash,
       signedOrder.takerTokenAmount
@@ -207,13 +205,13 @@ export class PostgresRelay extends Duplex implements Relay {
       this.log('error', `Error inserting order ${orderHash} into postgres.`, err);
       throw err;
     }
-
+    // publish new order message
     try {
       const channel = 'orderbook';
       const type = 'update';
       const payload: OrderbookUpdate = serializeSignedOrder(signedOrder);
 
-      const { baseToken, quoteToken } = await this.getBaseTokenAndQuoteToken(
+      const { baseToken, quoteToken } = await this.getBaseTokenAndQuoteTokenFromMakerAndTaker(
         signedOrder.takerTokenAddress,
         signedOrder.makerTokenAddress
       );
@@ -228,6 +226,7 @@ export class PostgresRelay extends Duplex implements Relay {
     } catch (err) {
       this.log('error', 'Error publishing event to redis', err);
     }
+    return signedOrder;
   }
 
   async addTokenPair(baseTokenAddress, quoteTokenAddress) {
@@ -275,7 +274,7 @@ export class PostgresRelay extends Duplex implements Relay {
 
   _read(size: number): void {}
 
-  private async getBaseTokenAndQuoteToken(
+  private async getBaseTokenAndQuoteTokenFromMakerAndTaker(
     takerTokenAddress,
     makerTokenAddress
   ): Promise<{ baseToken: string; quoteToken: string }> {
@@ -334,6 +333,11 @@ export class PostgresRelay extends Duplex implements Relay {
       takerTokenAmountRemaining,
     };
 
+    const { baseToken, quoteToken } = await this.getBaseTokenAndQuoteTokenFromMakerAndTaker(
+      updatedOrder.takerTokenAddress,
+      updatedOrder.makerTokenAddress
+    );
+
     try {
       const channel = 'orderbook';
       const type = 'fill';
@@ -343,14 +347,6 @@ export class PostgresRelay extends Duplex implements Relay {
         filledMakerTokenAmount: filledMakerTokenAmount.toString(),
         filledTakerTokenAmount: filledTakerTokenAmount.toString(),
       };
-      // need correct baseToken:quoteToken to make sure we emit to the right channel
-      // i.e. emitting 'baseToken:quoteToken' is correct
-      // but emitting 'quoteToken:baseToken' is incorrect (no one is listening to that channel, nor should they be)
-      const { baseToken, quoteToken } = await this.getBaseTokenAndQuoteToken(
-        updatedOrder.takerTokenAddress,
-        updatedOrder.makerTokenAddress
-      );
-
       const channelHash = `${channel}.${type}:${baseToken}:${quoteToken}`;
       const event: Message<OrderbookFill> = {
         channel,

@@ -81,11 +81,13 @@ export class WebSocketNode {
     this.log('verbose', `\tQuote token: ${quoteTokenAddress}`);
     this.log('verbose', `\tInclude snapshot: ${snapshot}, Snapshot limit: ${limit}`);
 
+    // subscribe to update & fill channels for token pair
     const updateChannelHash = `${channel}.update:${baseTokenAddress}:${quoteTokenAddress}`;
+    const fillChannelHash = `${channel}.fill:${baseTokenAddress}:${quoteTokenAddress}`;
     this.addClientChannelSubscription(ws, updateChannelHash);
-
+    this.addClientChannelSubscription(ws, fillChannelHash);
     // Temporary - will use redis to communicate/request to snapshot relay db
-    // Just getting a feel for it, GDAX does it a bit differently (REST call for snapshot, queue up ws messages)
+    // subscribe to snapshot channel for token pair
     if (snapshot) {
       const snapshotChannelHash = `${channel}.snapshot:${baseTokenAddress}:${quoteTokenAddress}`;
       this.addClientChannelSubscription(ws, snapshotChannelHash);
