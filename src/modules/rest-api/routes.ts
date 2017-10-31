@@ -2,27 +2,25 @@ import * as bodyParser from 'body-parser';
 import { Router } from 'express';
 import { ZeroEx } from '0x.js';
 import { mapOrderApiPayloadToSignedOrder, mapZeroExPortalOrderJSONToSignedOrder } from './adapter';
-import { RelayDatabase } from '../relay';
+import { Relay } from '../relay';
+import {
+  PaginationOptions,
+  OrderFilterOptions,
+  FeeQueryRequest,
+  FeeQueryResponse,
+} from '../../types';
 import { validateEndpointSignedOrderBySchema } from '../../util/validate';
 import { Logger } from '../../util/logger';
-import {
-  OrderPayload,
-  ApiOrderOptions,
-  ApiOrderbookOptions,
-  FeeApiRequest,
-  FeeApiResponse,
-  PaginationParams,
-  ZeroExPortalOrderJSON,
-} from './types';
+import { OrderPayload, ApiOrderbookOptions, ZeroExPortalOrderJSON } from './types';
 
-const createRouter = (db: RelayDatabase, zeroEx: ZeroEx, logger: Logger) => {
+const createRouter = (db: Relay, zeroEx: ZeroEx, logger: Logger) => {
   const router = Router();
   router.use(bodyParser.json({ type: '*/*' }));
   router.use(bodyParser.urlencoded({ extended: true }));
 
   router.get('/token_pairs', async (req, res) => {
-    const { page, per_page: perPage }: PaginationParams = req.query;
-    const pairs = await db.getTokenPairs(page, perPage);
+    const { page, per_page } = req.query;
+    const pairs = await db.getTokenPairs({ page, perPage: per_page });
     res.status(201).json(pairs);
   });
 
@@ -50,7 +48,7 @@ const createRouter = (db: RelayDatabase, zeroEx: ZeroEx, logger: Logger) => {
   });
 
   router.get('/orders', async (req, res) => {
-    const options: ApiOrderOptions = req.query;
+    const options: OrderFilterOptions = req.query;
     const orders = await db.getOrders(options);
     res.status(201).json(orders);
   });
@@ -66,9 +64,9 @@ const createRouter = (db: RelayDatabase, zeroEx: ZeroEx, logger: Logger) => {
 
   router.post('/fees', async (req, res) => {
     const { body } = req;
-    const payload = body as FeeApiRequest;
+    const payload = body as FeeQueryRequest;
     // right now, no fees
-    const response: FeeApiResponse = {
+    const response: FeeQueryResponse = {
       feeRecipient: '0x0000000000000000000000000000000000000000',
       makerFee: '0',
       takerFee: '0',
@@ -77,7 +75,7 @@ const createRouter = (db: RelayDatabase, zeroEx: ZeroEx, logger: Logger) => {
   });
 
   router.post('/order', async (req, res, next) => {
-    logger.log('debug', 'Order endpoint hit, order verifying...');
+    logger.log('debug', 'Order endpoint hit, verifying order...');
     const { body } = req;
     const possibleOrder = body as OrderPayload;
 
@@ -106,7 +104,7 @@ const createRouter = (db: RelayDatabase, zeroEx: ZeroEx, logger: Logger) => {
 
     try {
       await zeroEx.exchange.validateOrderFillableOrThrowAsync(signedOrder);
-      logger.log('debug', `Order ${orderHash} fillable`);
+      logger.log('debug', `Order ${orderHash} is fillable`);
     } catch (err) {
       logger.log('debug', `Order ${orderHash} is not fillable`);
       const e = {
