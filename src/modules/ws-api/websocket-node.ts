@@ -93,18 +93,23 @@ export class WebSocketNode {
       this.addClientChannelSubscription(ws, snapshotChannelHash);
       this.log('verbose', `Generating and sending snapshot for channel ${snapshotChannelHash}`);
       const orderbook = await this.relay.getOrderbook(baseTokenAddress, quoteTokenAddress);
-      const message = this.packageMessage({ type: 'snapshot', channel: 'orderbook', payload: orderbook, channelId: 0 });
+      const message = this.packageMessage({
+        type: 'snapshot',
+        channel: 'orderbook',
+        payload: orderbook,
+        channelId: 0,
+      });
       this.redisPublisher.publish(snapshotChannelHash, JSON.stringify(message));
     }
   }
 
   private packageMessage({ type, channel, channelId, payload }) {
-    return ({
-      type: "snapshot",
-      channel: "orderbook",
+    return {
+      type: 'snapshot',
+      channel: 'orderbook',
       // "channelId": 1,
       payload,
-    });
+    };
   }
 
   private addClientChannelSubscription(ws: WebSocket, channelToSubscribeTo: string) {

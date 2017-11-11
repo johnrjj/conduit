@@ -18,6 +18,14 @@ const generateTokens = async (zeroEx: ZeroEx) => await zeroEx.tokenRegistry.getT
 
 const generateTokenPairsFromTokens = (tokens: Array<Token>) => pairTokens(tokens);
 
+const generateWethQuotePairsOnly = (tokens: Array<Token>): Array<Array<string>> => {
+  const wethTokenIdx = tokens.findIndex(t => t.symbol.toUpperCase() === 'WETH');
+  const wethToken = tokens[wethTokenIdx];
+  const tokensExceptWeth = [...tokens.slice(0, wethTokenIdx), ...tokens.slice(wethTokenIdx + 1)];
+  const tokenPairsWithWethAsQuote = tokensExceptWeth.map(t => [t.address, wethToken.address]);
+  return tokenPairsWithWethAsQuote;
+};
+
 const populateTokenTable = async (db: Relay, zeroEx: ZeroEx) => {
   const tokens = await generateTokens(zeroEx);
   await Promise.all(tokens.map(db.addToken.bind(db)));
@@ -28,6 +36,16 @@ const populateTokenPairTable = async (db: Relay, zeroEx: ZeroEx) => {
   const tokenPairs = generateTokenPairsFromTokens(tokens);
   await Promise.all(
     tokenPairs.map(([baseToken, quoteToken]) => db.addTokenPair(baseToken, quoteToken))
+  );
+};
+
+const populateTokenPairTableWithOnlyWethAsQuote = async (db: Relay, zeroEx: ZeroEx) => {
+  const tokens = await generateTokens(zeroEx);
+  const tokenPairsWithWethAsQuote = generateWethQuotePairsOnly(tokens);
+  await Promise.all(
+    tokenPairsWithWethAsQuote.map(([baseToken, quoteToken]) =>
+      db.addTokenPair(baseToken, quoteToken)
+    )
   );
 };
 
@@ -54,4 +72,5 @@ export {
   populateTokenTable,
   populateTokenPairTable,
   populateDatabase,
+  populateTokenPairTableWithOnlyWethAsQuote,
 };
