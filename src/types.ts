@@ -37,10 +37,6 @@ export interface SerializedSignedOrder extends SerializedOrder {
   ecSignature: ECSignature;
 }
 
-export type BlockchainLogEvent = LogEvent<
-  LogFillContractEventArgs | LogCancelContractEventArgs | LogErrorContractEventArgs
->;
-
 export type ZeroExOrderFillEvent = LogFillContractEventArgs;
 export type ZeroExOrderCancelEvent = LogCancelContractEventArgs;
 

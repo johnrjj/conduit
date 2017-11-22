@@ -13,9 +13,10 @@ import { Pool } from 'pg';
 import { PassThrough } from 'stream';
 import { ZeroEx, ExchangeEvents } from '0x.js';
 import { Relay, PostgresRelay } from './modules/relay';
+import { OrderWatcher } from './modules/order-watcher';
 import v0ApiRouteFactory from './modules/rest-api/routes';
 import { WebSocketNode } from './modules/ws-api/websocket-node';
-import { RoutingError, BlockchainLogEvent } from './types';
+import { RoutingError } from './types';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 import { populateDatabase } from './sample-data/generate-data';
 import config from './config';
@@ -36,12 +37,17 @@ const createApp = async () => {
   providerEngine.addProvider(new RpcSubprovider({ rpcUrl: BLOCKCHAIN_NETWORK_ENDPOINT }));
   providerEngine.start();
 
-  const zeroEx = new ZeroEx(providerEngine);
+  const zeroEx = new ZeroEx(providerEngine, {
+    orderWatcherConfig: { eventPollingIntervalMs: 1000 },
+  });
+  const { orderStateWatcher } = zeroEx;
 
+  // Set up Redis
   const redisPublisher = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
   const redisSubscriber = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
   logger.log('debug', 'Connected to Redis instance');
 
+  // Set up Relay Client (Postgres flavor)
   let relayClient: Relay;
   try {
     const pool = config.DATABASE_URL
@@ -73,6 +79,14 @@ const createApp = async () => {
     throw e;
   }
 
+  // Set up order watcher
+  const orderWatcher = new OrderWatcher(zeroEx, relayClient, redisPublisher, redisSubscriber);
+  logger.log('debug', `Connected to order watcher`);
+  const orders = await relayClient.getOrders();
+  await orderWatcher.watchOrderBatch(orders);
+  logger.log('debug', `Subscribed to updates for all ${orders.length} active orders`);
+
+  // Set up express application (REST/WS endpoints)
   const app = express();
   const expressWs = expressWsFactory(app);
   app.set('trust proxy', true);
@@ -107,35 +121,6 @@ const createApp = async () => {
     res.status(error.status || 500);
     res.json({ ...error });
   });
-
-  // todo: make this a module, pushing to a queue
-  const zeroExStreamWrapper = new PassThrough({
-    objectMode: true,
-    highWaterMark: 1024,
-  });
-  zeroEx.exchange
-    .subscribeAsync(ExchangeEvents.LogFill, {}, ev => {
-      logger.log('verbose', 'LogFill received from 0x', ev);
-      const logEvent = ev as BlockchainLogEvent;
-      (logEvent as any).type = `Blockchain.${ev.event}`;
-      zeroExStreamWrapper.push(logEvent);
-    })
-    .then(cancelToken => {})
-    .catch(e => logger.log('error', 'Error subscribing to 0x log fills', e));
-  zeroEx.exchange
-    .subscribeAsync(ExchangeEvents.LogCancel, {}, ev => {
-      logger.log('verbose', 'LogCancel received from 0x', ev);
-      const logEvent = ev as BlockchainLogEvent;
-      (logEvent as any).type = `Blockchain.${ev.event}`;
-      zeroExStreamWrapper.push(logEvent);
-    })
-    .then(cancelToken => {})
-    .catch(e => logger.log('error', 'Error subscribing to 0x log cancels', e));
-  logger.log('verbose', 'Subscribed to ZeroEx Blockchain Fill and Cancel Log events');
-
-  // Relay Database gets all events from ZeroEx Stream
-  // (Eventually will need to be put into a queue to scale)
-  zeroExStreamWrapper.pipe(relayClient);
 
   return app;
 };

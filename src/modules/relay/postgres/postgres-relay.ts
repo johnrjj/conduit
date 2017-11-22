@@ -5,13 +5,12 @@ import { SQL } from 'sql-template-strings';
 import { ZeroEx, SignedOrder, Token } from '0x.js';
 import { RedisClient } from 'redis';
 import { PostgresRelayOptions, PostgresOrderModel } from './types';
-import { Relay } from '../types';
+import { Relay, OrderRelevantState } from '../types';
 import { Message, OrderbookUpdate, OrderbookFill, AvailableMessageTypes } from '../../ws-api/types';
 import {
   OrderbookPair,
   ZeroExOrderFillEvent,
   ZeroExOrderCancelEvent,
-  BlockchainLogEvent,
   TokenPair,
   OrderFilterOptions,
   SerializedSignedOrderWithCurrentBalance,
@@ -112,6 +111,10 @@ export class PostgresRelay extends Duplex implements Relay {
     }
     const formattedOrder = this.formatOrderFromDb(res.rows[0]);
     return formattedOrder;
+  }
+
+  async updateOrder(orderHash: string, orderState: OrderRelevantState): Promise<void> {
+    throw new Error('implement me');
   }
 
   async getOrderbook(baseTokenAddress, quoteTokenAddress): Promise<OrderbookPair> {
@@ -244,31 +247,33 @@ export class PostgresRelay extends Duplex implements Relay {
       INSERT 
       INTO    tokens
               (address, symbol, min_amount, max_amount, precision, name)
-      VALUES  (${token.address}, ${token.symbol}, ${0}, ${1000000000000000000}, ${token.decimals}, ${token.name})
+      VALUES  (${token.address}, ${token.symbol}, ${0}, ${1000000000000000000}, ${
+      token.decimals
+    }, ${token.name})
     `);
   }
 
   _write(msg, encoding, callback) {
     this.log('debug', `Postgres Relay received a message of type ${msg.type || 'unknown'}`);
-    // push downstream
-    this.push(msg);
-    switch (msg.type) {
-      case 'Blockchain.LogFill':
-        const blockchainFillLog = msg as BlockchainLogEvent;
-        const payload = blockchainFillLog.args as ZeroExOrderFillEvent;
-        this.handleOrderFillMessage(blockchainFillLog.args as ZeroExOrderFillEvent);
-        break;
-      case 'Blockchain.LogCancel':
-        const blockchainCancelLog = msg as BlockchainLogEvent;
-        this.log('debug', 'Doing nothing with Blockchain.LogCancel right now');
-        break;
-      default:
-        this.log(
-          'debug',
-          `Postgres Relay received event ${msg.type} it doesn't know how to handle`
-        );
-        break;
-    }
+    // // push downstream
+    // this.push(msg);
+    // switch (msg.type) {
+    //   case 'Blockchain.LogFill':
+    //     const blockchainFillLog = msg as BlockchainLogEvent;
+    //     const payload = blockchainFillLog.args as ZeroExOrderFillEvent;
+    //     this.handleOrderFillMessage(blockchainFillLog.args as ZeroExOrderFillEvent);
+    //     break;
+    //   case 'Blockchain.LogCancel':
+    //     const blockchainCancelLog = msg as BlockchainLogEvent;
+    //     this.log('debug', 'Doing nothing with Blockchain.LogCancel right now');
+    //     break;
+    //   default:
+    //     this.log(
+    //       'debug',
+    //       `Postgres Relay received event ${msg.type} it doesn't know how to handle`
+    //     );
+    //     break;
+    // }
     callback();
   }
 
@@ -325,7 +330,9 @@ export class PostgresRelay extends Duplex implements Relay {
     this.updateRemainingTakerTokenAmountForOrderInDatabase(orderHash, filledTakerTokenAmount);
     this.log(
       'info',
-      `Updated ${orderHash} in postgres database. Updated Taker Token Amount to ${takerTokenAmountRemaining.toString()}`
+      `Updated ${
+        orderHash
+      } in postgres database. Updated Taker Token Amount to ${takerTokenAmountRemaining.toString()}`
     );
 
     const updatedOrder: SignedOrderWithCurrentBalance = {
@@ -435,7 +442,7 @@ export class PostgresRelay extends Duplex implements Relay {
       ecSignature: {
         v: parseInt(dbOrder.ec_sig_v, 10),
         r: dbOrder.ec_sig_r,
-        s: dbOrder.ec_sig_v,
+        s: dbOrder.ec_sig_s,
       },
     };
     return order;

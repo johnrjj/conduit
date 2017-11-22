@@ -1,4 +1,4 @@
-import { SchemaValidator, ValidatorResult, schemas } from '0x-json-schemas';
+import { SchemaValidator, ValidatorResult, schemas } from '@0xproject/json-schemas';
 
 const { signedOrderSchema } = schemas;
 const validator = new SchemaValidator();

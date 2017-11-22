@@ -9,6 +9,7 @@
     "sourceMap": true,
     "experimentalDecorators": true,
     "strictNullChecks": true,
+    "noUnusedLocals": false,
     "types": [
       "node"
     ]
