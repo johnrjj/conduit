@@ -1,3 +1,5 @@
+import { config as envconfig } from 'dotenv';
+envconfig();
 import createApp from './app';
 import config from './config';
 import { ConsoleLoggerFactory } from './util/logger';

@@ -13,7 +13,8 @@
     "prettier": "prettier --single-quote --print-width 100 --trailing-comma es5 --write 'src/**/*.ts'",
     "deploy": "now && now alias && now 0x-relayer-api --safe",
     "now-start": "node dist/index",
-    "heroku-postbuild": "npm run build"
+    "heroku-postbuild": "npm run build",
+    "start:docker": "docker-compose up"
   },
   "dependencies": {
     "0x.js": "^0.26.0",
@@ -22,6 +23,7 @@
     "body-parser": "^1.18.2",
     "cors": "^2.8.4",
     "date-fns": "^1.29.0",
+    "dotenv": "^4.0.0",
     "express": "^4.16.1",
     "express-winston": "^2.4.0",
     "express-ws": "^3.0.0",

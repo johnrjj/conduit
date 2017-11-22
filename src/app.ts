@@ -32,16 +32,19 @@ const createApp = async () => {
   const ZEROEX_EXCHANGE_SOL_ADDRESS = config.ZERO_EX_EXCHANGE_SOL_ADDRESS;
 
   logger.log('info', 'Conduit starting...');
+  // Set up Web3
   const providerEngine = new ProviderEngine();
   providerEngine.addProvider(new FilterSubprovider());
   providerEngine.addProvider(new RpcSubprovider({ rpcUrl: BLOCKCHAIN_NETWORK_ENDPOINT }));
   providerEngine.start();
-
+  logger.log('verbose', 'Connected to Web3 Provider Engine');
+  
+  // Set up ZeroEx
   const zeroEx = new ZeroEx(providerEngine, {
     orderWatcherConfig: { eventPollingIntervalMs: 1000 },
   });
-  const { orderStateWatcher } = zeroEx;
-
+  logger.log('verbose', 'ZeroEx client set up');
+  
   // Set up Redis
   const redisPublisher = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
   const redisSubscriber = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
@@ -53,11 +56,11 @@ const createApp = async () => {
     const pool = config.DATABASE_URL
       ? new Pool({ connectionString: config.DATABASE_URL })
       : new Pool({
+          host: config.PGHOST,
+          port: config.PGPORT,
           user: config.PGUSER,
           password: config.PGPASSWORD,
-          host: config.PGHOST,
           database: config.PGDATABASE,
-          port: config.PGPORT,
         });
     relayClient = new PostgresRelay({
       postgresPool: pool,
@@ -70,18 +73,21 @@ const createApp = async () => {
       redisSubscriber,
     });
     await pool.connect();
-    logger.log('debug', `Connected to Postgres database`);
+    logger.log('verbose', `Connected to Postgres database`);
     if (config.PG_POPULATE_DATABASE) {
       populateDatabase(relayClient, zeroEx, logger);
+      logger.log('verbose', 'Populated Postgres database');
     }
   } catch (e) {
     logger.log('error', 'Error connecting to Postgres', e);
     throw e;
   }
+  logger.log('debug', `Connected to Relay client`);
+  
 
   // Set up order watcher
   const orderWatcher = new OrderWatcher(zeroEx, relayClient, redisPublisher, redisSubscriber);
-  logger.log('debug', `Connected to order watcher`);
+  logger.log('debug', `Connected to OrderWatcher`);
   const orders = await relayClient.getOrders();
   await orderWatcher.watchOrderBatch(orders);
   logger.log('debug', `Subscribed to updates for all ${orders.length} active orders`);

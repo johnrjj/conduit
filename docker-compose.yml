@@ -1,0 +1,40 @@
+# todo: move env vars to .env file
+version: '2'
+services:
+  server:
+    build:
+      context: .
+      dockerfile: DockerfileServer
+    ports:
+      - 3001:3001
+    volumes:
+     - .:/src
+    links:
+      - db
+      - redis
+    depends_on:
+      - db
+      - redis
+    environment:
+      PORT: '3001'
+      LOG_LEVEL: 'debug'
+      REDIS_URL: 'redis://redis:6379'
+      PGUSER: 'postgres'
+      PGPASSWORD: 'password'
+      PGDATABASE: 'zeroex'
+      PGHOST: 'db'
+      PGPORT: '5432'
+
+  db:
+    image: postgres:9.6
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'password'
+      POSTGRES_DB: 'zeroex'
+
+  redis:
+    image: redis:3.2.8
+    ports:
+      - 6379:6379
