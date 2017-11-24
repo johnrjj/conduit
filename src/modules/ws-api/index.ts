@@ -2,7 +2,7 @@ import * as WebSocket from 'ws';
 import { Request, NextFunction } from 'express';
 import { RedisClient } from 'redis';
 import { Message, SubscribeRequest } from './types';
-import { Relay } from '../relay';
+import { Relay } from '../clients/types';
 import { Logger } from '../../util/logger';
 
 export class WebSocketNode {
@@ -44,6 +44,8 @@ export class WebSocketNode {
       }
       subscribers.forEach(ws => ws.send(message));
     });
+
+    this.startHeartbeat();
   }
 
   public async acceptConnection(ws: WebSocket, req: Request, next: NextFunction): Promise<void> {
@@ -72,6 +74,19 @@ export class WebSocketNode {
       next(e);
     }
   }
+
+  private startHeartbeat() {
+    const sendHeartbeatToAllOpenConnections = () => this.wsServerRef.clients.forEach(ws =>{
+      if (ws.readyState == ws.OPEN) {  
+        ws.send('heartbeat');
+      }  
+    });
+
+    setInterval(() => {
+      this.log('debug', 'Sending heartbeat to all open connections');      
+      sendHeartbeatToAllOpenConnections();
+    }, 20000);
+  };3
 
   private async handleChannelSubscribeRequest(ws: WebSocket, message: Message<SubscribeRequest>) {
     const { channel, type, payload } = message;

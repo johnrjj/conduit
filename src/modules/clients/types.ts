@@ -22,7 +22,7 @@ export interface OrderRelevantState {
   remainingFillableTakerTokenAmount: BigNumber;
 }
 
-export interface Relay extends Duplex {
+export interface Relay {
   getTokenPairs(o?: PaginationOptions): Promise<Array<TokenPair>>;
   getOrders(options?: OrderFilterOptions): Promise<Array<SignedOrder>>;
   getOrder(orderHash: string): Promise<SignedOrder | null>;
@@ -31,5 +31,6 @@ export interface Relay extends Duplex {
   getOrderbook(baseTokenAddress: string, quoteTokenAddress: string): Promise<OrderbookPair>;
   addToken(token: Token): Promise<void>;
   addTokenPair(baseToken: string, quoteToken: string): Promise<void>;
-  updateOrder(orderHash: string, orderState: OrderRelevantState): Promise<void>;
+  updateOrder(orderHash: string, orderState: OrderRelevantState): Promise<SignedOrder>;
+  getBaseTokenAndQuoteTokenFromMakerAndTaker(makerTokenAddress: string, takerTokenAddress): Promise<{ baseToken: string, quoteToken: string }>;
 }

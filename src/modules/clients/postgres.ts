@@ -4,9 +4,8 @@ import { Pool } from 'pg';
 import { SQL } from 'sql-template-strings';
 import { ZeroEx, SignedOrder, Token } from '0x.js';
 import { RedisClient } from 'redis';
-import { PostgresRelayOptions, PostgresOrderModel } from './types';
-import { Relay, OrderRelevantState } from '../types';
-import { Message, OrderbookUpdate, OrderbookFill, AvailableMessageTypes } from '../../ws-api/types';
+import { Relay, OrderRelevantState } from './types';
+import { Message, OrderbookUpdate, OrderbookFill, AvailableMessageTypes } from '../ws-api/types';
 import {
   OrderbookPair,
   ZeroExOrderFillEvent,
@@ -17,18 +16,16 @@ import {
   SignedOrderWithCurrentBalance,
   FeeQueryRequest,
   FeeQueryResponse,
-} from '../../../types';
-import { serializeSignedOrder } from '../../../util/order';
-import { Logger } from '../../../util/logger';
+} from '../../types';
+import { serializeSignedOrder } from '../../util/order';
+import { Logger } from '../../util/logger';
 
-export class PostgresRelay extends Duplex implements Relay {
+export class PostgresRelay implements Relay {
   private pool: Pool;
   private orderTableName: string;
   private tokenTableName: string;
   private tokenPairsTableName: string;
   private zeroEx: ZeroEx;
-  private redisSubscriber: RedisClient;
-  private redisPublisher: RedisClient;
   private logger?: Logger;
 
   constructor({
@@ -41,14 +38,11 @@ export class PostgresRelay extends Duplex implements Relay {
     redisSubscriber,
     logger,
   }: PostgresRelayOptions) {
-    super({ objectMode: true, highWaterMark: 1024 });
     this.pool = postgresPool;
     this.orderTableName = orderTableName || 'orders';
     this.tokenTableName = tokenTableName || 'tokens';
     this.tokenPairsTableName = tokenPairTableName || 'token_pairs';
     this.zeroEx = zeroEx;
-    this.redisPublisher = redisPublisher;
-    this.redisSubscriber = redisSubscriber;
     this.logger = logger;
   }
 
@@ -92,10 +86,15 @@ export class PostgresRelay extends Duplex implements Relay {
   }
 
   async getOrders(options?: OrderFilterOptions): Promise<SignedOrder[]> {
-    const res = await this.pool.query(SQL`
+    const query = SQL`
       SELECT * 
       FROM orders
-  `);
+    `;
+    // todo, support all options after MVP
+    if (options && options.isOpen) {
+      query.append(SQL`WHERE taker_token_remaining_amount > 0`)
+    }
+    const res = await this.pool.query(query);
     const formattedOrders = res.rows.map(this.formatOrderFromDb);
     return formattedOrders;
   }
@@ -113,8 +112,17 @@ export class PostgresRelay extends Duplex implements Relay {
     return formattedOrder;
   }
 
-  async updateOrder(orderHash: string, orderState: OrderRelevantState): Promise<void> {
-    throw new Error('implement me');
+  async updateOrder(orderHash: string, orderState: OrderRelevantState): Promise<SignedOrder> {
+    // todo
+    // update order
+    // ....
+
+    // return updated signed order
+    const signedOrder = await this.getOrder(orderHash);
+    if (!signedOrder) {
+      throw Error('Could not update, order does not exist');
+    }
+    return signedOrder;
   }
 
   async getOrderbook(baseTokenAddress, quoteTokenAddress): Promise<OrderbookPair> {
@@ -208,27 +216,6 @@ export class PostgresRelay extends Duplex implements Relay {
       this.log('error', `Error inserting order ${orderHash} into postgres.`, err);
       throw err;
     }
-    // publish new order message
-    try {
-      const channel = 'orderbook';
-      const type = 'update';
-      const payload: OrderbookUpdate = serializeSignedOrder(signedOrder);
-
-      const { baseToken, quoteToken } = await this.getBaseTokenAndQuoteTokenFromMakerAndTaker(
-        signedOrder.takerTokenAddress,
-        signedOrder.makerTokenAddress
-      );
-
-      const channelHash = `${channel}.${type}:${baseToken}:${quoteToken}`;
-      const event: Message<OrderbookUpdate> = {
-        channel,
-        type,
-        payload,
-      };
-      this.publishMessage(channelHash, event);
-    } catch (err) {
-      this.log('error', 'Error publishing event to redis', err);
-    }
     return signedOrder;
   }
 
@@ -253,33 +240,7 @@ export class PostgresRelay extends Duplex implements Relay {
     `);
   }
 
-  _write(msg, encoding, callback) {
-    this.log('debug', `Postgres Relay received a message of type ${msg.type || 'unknown'}`);
-    // // push downstream
-    // this.push(msg);
-    // switch (msg.type) {
-    //   case 'Blockchain.LogFill':
-    //     const blockchainFillLog = msg as BlockchainLogEvent;
-    //     const payload = blockchainFillLog.args as ZeroExOrderFillEvent;
-    //     this.handleOrderFillMessage(blockchainFillLog.args as ZeroExOrderFillEvent);
-    //     break;
-    //   case 'Blockchain.LogCancel':
-    //     const blockchainCancelLog = msg as BlockchainLogEvent;
-    //     this.log('debug', 'Doing nothing with Blockchain.LogCancel right now');
-    //     break;
-    //   default:
-    //     this.log(
-    //       'debug',
-    //       `Postgres Relay received event ${msg.type} it doesn't know how to handle`
-    //     );
-    //     break;
-    // }
-    callback();
-  }
-
-  _read(size: number): void {}
-
-  private async getBaseTokenAndQuoteTokenFromMakerAndTaker(
+  async getBaseTokenAndQuoteTokenFromMakerAndTaker(
     takerTokenAddress,
     makerTokenAddress
   ): Promise<{ baseToken: string; quoteToken: string }> {
@@ -335,45 +296,35 @@ export class PostgresRelay extends Duplex implements Relay {
       } in postgres database. Updated Taker Token Amount to ${takerTokenAmountRemaining.toString()}`
     );
 
-    const updatedOrder: SignedOrderWithCurrentBalance = {
-      ...existingOrder,
-      takerTokenAmountRemaining,
-    };
+    // const updatedOrder: SignedOrderWithCurrentBalance = {
+    //   ...existingOrder,
+    //   takerTokenAmountRemaining,
+    // };
 
-    const { baseToken, quoteToken } = await this.getBaseTokenAndQuoteTokenFromMakerAndTaker(
-      updatedOrder.takerTokenAddress,
-      updatedOrder.makerTokenAddress
-    );
+    // const { baseToken, quoteToken } = await this.getBaseTokenAndQuoteTokenFromMakerAndTaker(
+    //   updatedOrder.takerTokenAddress,
+    //   updatedOrder.makerTokenAddress
+    // );
 
-    try {
-      const channel = 'orderbook';
-      const type = 'fill';
-      const payload: OrderbookFill = {
-        ...serializeSignedOrder(updatedOrder),
-        takerTokenAmountRemaining: takerTokenAmountRemaining.toString(),
-        filledMakerTokenAmount: filledMakerTokenAmount.toString(),
-        filledTakerTokenAmount: filledTakerTokenAmount.toString(),
-      };
-      const channelHash = `${channel}.${type}:${baseToken}:${quoteToken}`;
-      const event: Message<OrderbookFill> = {
-        channel,
-        type,
-        payload,
-      };
-      this.publishMessage(channelHash, event);
-    } catch (err) {
-      this.log('error', 'Error publishing event to redis', err);
-    }
-  }
-
-  private publishMessage(channel: string, message: AvailableMessageTypes) {
-    try {
-      const eventString = JSON.stringify(event);
-      this.log('verbose', `Publishing event to ${channel}`);
-      this.redisPublisher.publish(channel, eventString);
-    } catch (err) {
-      this.log('error', 'Error publishing event to redis', err);
-    }
+    // try {
+    //   const channel = 'orderbook';
+    //   const type = 'fill';
+    //   const payload: OrderbookFill = {
+    //     ...serializeSignedOrder(updatedOrder),
+    //     takerTokenAmountRemaining: takerTokenAmountRemaining.toString(),
+    //     filledMakerTokenAmount: filledMakerTokenAmount.toString(),
+    //     filledTakerTokenAmount: filledTakerTokenAmount.toString(),
+    //   };
+    //   const channelHash = `${channel}.${type}:${baseToken}:${quoteToken}`;
+    //   const event: Message<OrderbookFill> = {
+    //     channel,
+    //     type,
+    //     payload,
+    //   };
+    //   // this.publishMessage(channelHash, event);
+    // } catch (err) {
+    //   this.log('error', 'Error publishing event to redis', err);
+    // }
   }
 
   private async updateRemainingTakerTokenAmountForOrderInDatabase(
@@ -454,4 +405,50 @@ export class PostgresRelay extends Duplex implements Relay {
     }
     this.logger.log(level, message, meta);
   }
+}
+
+
+export interface PostgresRelayOptions {
+  postgresPool: Pool;
+  orderTableName: string;
+  tokenTableName: string;
+  tokenPairTableName: string;
+  zeroEx: ZeroEx;
+  logger?: Logger;
+  redisSubscriber: RedisClient;
+  redisPublisher: RedisClient;
+}
+
+export interface PostgresOrderModel {
+  exchange_contract_address: string;
+  maker: string;
+  taker: string;
+  maker_token_address: string;
+  taker_token_address: string;
+  fee_recipient: string;
+  maker_token_amount: string;
+  taker_token_amount: string;
+  maker_fee: string;
+  taker_fee: string;
+  expiration_unix_timestamp_sec: string;
+  salt: string;
+  ec_sig_v: string;
+  ec_sig_r: string;
+  ec_sig_s: string;
+  order_hash: string;
+  taker_token_remaining_amount: string;
+}
+
+export interface PostgresTokenPairsModel {
+  base_token: string;
+  quote_token: string;
+}
+
+export interface PostgresTokenModel {
+  address: string;
+  symbol: string; // ex: 'ZRX'
+  name: string; // ex: 'ZeroEx Token'
+  min_amount: string;
+  max_amount: string;
+  precision: number;
 }

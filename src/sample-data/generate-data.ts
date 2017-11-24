@@ -1,5 +1,5 @@
 import { ZeroEx, Token } from '0x.js';
-import { Relay } from '../modules/relay';
+import { Relay } from '../modules/clients/types';
 
 // O(n^2)
 const pairTokens = (arr: Array<Token>): Array<Array<string>> => {

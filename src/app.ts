@@ -12,10 +12,11 @@ import { BigNumber } from 'bignumber.js';
 import { Pool } from 'pg';
 import { PassThrough } from 'stream';
 import { ZeroEx, ExchangeEvents } from '0x.js';
-import { Relay, PostgresRelay } from './modules/relay';
-import { OrderWatcher } from './modules/order-watcher';
-import v0ApiRouteFactory from './modules/rest-api/routes';
-import { WebSocketNode } from './modules/ws-api/websocket-node';
+import { Relay } from './modules/clients/types';
+import { PostgresRelay } from './modules/clients/postgres';
+import { OrderWatcher } from './modules/order-watcher/handler';
+import v0ApiRouteFactory from './modules/rest-api';
+import { WebSocketNode } from './modules/ws-api';
 import { RoutingError } from './types';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 import { populateDatabase } from './sample-data/generate-data';
@@ -38,13 +39,13 @@ const createApp = async () => {
   providerEngine.addProvider(new RpcSubprovider({ rpcUrl: BLOCKCHAIN_NETWORK_ENDPOINT }));
   providerEngine.start();
   logger.log('verbose', 'Connected to Web3 Provider Engine');
-  
+
   // Set up ZeroEx
   const zeroEx = new ZeroEx(providerEngine, {
     orderWatcherConfig: { eventPollingIntervalMs: 1000 },
   });
   logger.log('verbose', 'ZeroEx client set up');
-  
+
   // Set up Redis
   const redisPublisher = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
   const redisSubscriber = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
@@ -83,14 +84,13 @@ const createApp = async () => {
     throw e;
   }
   logger.log('debug', `Connected to Relay client`);
-  
 
   // Set up order watcher
-  const orderWatcher = new OrderWatcher(zeroEx, relayClient, redisPublisher, redisSubscriber);
+  const orderWatcher = new OrderWatcher(zeroEx, relayClient, redisPublisher, redisSubscriber, logger);
   logger.log('debug', `Connected to OrderWatcher`);
-  const orders = await relayClient.getOrders();
+  const orders = await relayClient.getOrders({ isOpen: true });
   await orderWatcher.watchOrderBatch(orders);
-  logger.log('debug', `Subscribed to updates for all ${orders.length} active orders`);
+  logger.log('debug', `Subscribed to updates for all ${orders.length} open orders`);
 
   // Set up express application (REST/WS endpoints)
   const app = express();

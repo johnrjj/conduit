@@ -2,7 +2,7 @@ import * as bodyParser from 'body-parser';
 import { Router } from 'express';
 import { ZeroEx } from '0x.js';
 import { mapOrderApiPayloadToSignedOrder, mapZeroExPortalOrderJSONToSignedOrder } from './util';
-import { Relay } from '../relay';
+import { Relay } from '../clients/types';
 import {
   PaginationOptions,
   OrderFilterOptions,
