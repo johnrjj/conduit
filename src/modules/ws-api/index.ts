@@ -78,12 +78,12 @@ export class WebSocketNode {
   private startHeartbeat() {
     const sendHeartbeatToAllOpenConnections = () => this.wsServerRef.clients.forEach(ws =>{
       if (ws.readyState == ws.OPEN) {  
-        ws.send('heartbeat');
+        ws.send(JSON.stringify({type: 'heartbeat'}));
       }  
     });
 
     setInterval(() => {
-      this.log('debug', 'Sending heartbeat to all open connections');      
+      this.log('verbose', 'Sending heartbeat to all open client websocket connections');      
       sendHeartbeatToAllOpenConnections();
     }, 20000);
   };3
@@ -140,6 +140,9 @@ export class WebSocketNode {
     if (subscriptions && subscriptions.size < 1) {
       this.redisSubscriber.subscribe(channelToSubscribeTo);
       this.log('verbose', `WebSocket server node subscribed to ${channelToSubscribeTo}`);
+    }
+    if (subscriptions.has(ws)) {
+      this.log('verbose', `WebSocket server node already subscribed to ${channelToSubscribeTo}`);
     }
     subscriptions.add(ws);
     this.channelSubscriptions.set(channelToSubscribeTo, subscriptions);
