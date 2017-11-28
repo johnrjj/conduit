@@ -4,8 +4,7 @@ import { Pool } from 'pg';
 import { SQL } from 'sql-template-strings';
 import { ZeroEx, SignedOrder, Token } from '0x.js';
 import { RedisClient } from 'redis';
-import { Relay, OrderRelevantState } from './types';
-import { Message, OrderbookUpdate, OrderbookFill, AvailableMessageTypes } from '../ws-api/types';
+import { Relay, OrderRelevantState } from '../types';
 import {
   OrderbookPair,
   ZeroExOrderFillEvent,
@@ -16,16 +15,39 @@ import {
   SignedOrderWithCurrentBalance,
   FeeQueryRequest,
   FeeQueryResponse,
-} from '../../types';
-import { serializeSignedOrder } from '../../util/order';
-import { Logger } from '../../util/logger';
+} from '../../../types';
+import { serializeSignedOrder } from '../../../util/order';
+import { Logger } from '../../../util/logger';
 
-export class PostgresRelay implements Relay {
+export interface Repository {
+  getTokenPairs();
+  getOrders(options?: OrderFilterOptions);
+  getOrder(orderHash: string);
+  updateOrder(orderHash: string, orderState: OrderRelevantState);
+  getOrderbookForTokenPair(baseTokenAddress: string, quoteTokenAddress: string);
+  addOrder(orderHash: string, takerTokenRemainingAmount: BigNumber, signedOrder: SignedOrder);
+  addToken(token: Token);
+  addTokenPair(baseTokenAddress, quoteTokenAddress);
+  getBaseTokenAndQuoteTokenFromMakerAndTaker(takerTokenAddress: string, makerTokenAddress: string)
+}
+
+export interface PostgresRepositoryOptions {
+  postgresPool: Pool;
+  orderTableName: string;
+  tokenTableName: string;
+  tokenPairTableName: string;
+  zeroEx: ZeroEx;
+  logger?: Logger;
+  redisSubscriber: RedisClient;
+  redisPublisher: RedisClient;
+}
+
+
+export class PostgresRepository implements Repository {
   private pool: Pool;
   private orderTableName: string;
   private tokenTableName: string;
   private tokenPairsTableName: string;
-  private zeroEx: ZeroEx;
   private logger?: Logger;
 
   constructor({
@@ -33,16 +55,12 @@ export class PostgresRelay implements Relay {
     orderTableName,
     tokenTableName,
     tokenPairTableName,
-    zeroEx,
-    redisPublisher,
-    redisSubscriber,
     logger,
-  }: PostgresRelayOptions) {
+  }: PostgresRepositoryOptions) {
     this.pool = postgresPool;
     this.orderTableName = orderTableName || 'orders';
     this.tokenTableName = tokenTableName || 'tokens';
     this.tokenPairsTableName = tokenPairTableName || 'token_pairs';
-    this.zeroEx = zeroEx;
     this.logger = logger;
   }
 
@@ -125,7 +143,7 @@ export class PostgresRelay implements Relay {
     return signedOrder;
   }
 
-  async getOrderbook(baseTokenAddress, quoteTokenAddress): Promise<OrderbookPair> {
+  async getOrderbookForTokenPair(baseTokenAddress, quoteTokenAddress): Promise<OrderbookPair> {
     const bidsQueryResPromise = this.pool.query(SQL`
       SELECT * 
       FROM orders
@@ -165,11 +183,7 @@ export class PostgresRelay implements Relay {
     return freeFee;
   }
 
-  async postOrder(orderHash: string, signedOrder: SignedOrder): Promise<SignedOrder> {
-    const takerTokenRemainingAmount = await this.getRemainingTakerAmount(
-      orderHash,
-      signedOrder.takerTokenAmount
-    );
+  async addOrder(orderHash: string, takerTokenRemainingAmount: BigNumber, signedOrder: SignedOrder): Promise<SignedOrder> {
 
     try {
       const res = await this.pool.query(SQL`
@@ -260,73 +274,6 @@ export class PostgresRelay implements Relay {
     };
   }
 
-  private async handleOrderFillMessage(fillMessage: ZeroExOrderFillEvent) {
-    const { orderHash, filledMakerTokenAmount, filledTakerTokenAmount } = fillMessage;
-    this.log(
-      'debug',
-      `Order ${orderHash} details:
-      FilledMakerAmount: ${filledMakerTokenAmount.toString()}
-      FilledTakerAmount: ${filledTakerTokenAmount.toString()}`
-    );
-
-    const existingOrder = await this.getFullOrder(orderHash);
-    if (!existingOrder) {
-      this.log(
-        'debug',
-        `Order ${orderHash} from OrderFillMessage does not exist in our orderbook, skipping`
-      );
-      return;
-    }
-
-    this.log('info', `Updating order ${orderHash} in orderbook - got a fill event`);
-    const takerTokenAmountRemaining = await this.getRemainingTakerAmount(
-      orderHash,
-      existingOrder.takerTokenAmount
-    );
-    this.log(
-      'debug',
-      `Order ${orderHash} has ${takerTokenAmountRemaining.toString()} remaining to fill`
-    );
-
-    this.updateRemainingTakerTokenAmountForOrderInDatabase(orderHash, filledTakerTokenAmount);
-    this.log(
-      'info',
-      `Updated ${
-        orderHash
-      } in postgres database. Updated Taker Token Amount to ${takerTokenAmountRemaining.toString()}`
-    );
-
-    // const updatedOrder: SignedOrderWithCurrentBalance = {
-    //   ...existingOrder,
-    //   takerTokenAmountRemaining,
-    // };
-
-    // const { baseToken, quoteToken } = await this.getBaseTokenAndQuoteTokenFromMakerAndTaker(
-    //   updatedOrder.takerTokenAddress,
-    //   updatedOrder.makerTokenAddress
-    // );
-
-    // try {
-    //   const channel = 'orderbook';
-    //   const type = 'fill';
-    //   const payload: OrderbookFill = {
-    //     ...serializeSignedOrder(updatedOrder),
-    //     takerTokenAmountRemaining: takerTokenAmountRemaining.toString(),
-    //     filledMakerTokenAmount: filledMakerTokenAmount.toString(),
-    //     filledTakerTokenAmount: filledTakerTokenAmount.toString(),
-    //   };
-    //   const channelHash = `${channel}.${type}:${baseToken}:${quoteToken}`;
-    //   const event: Message<OrderbookFill> = {
-    //     channel,
-    //     type,
-    //     payload,
-    //   };
-    //   // this.publishMessage(channelHash, event);
-    // } catch (err) {
-    //   this.log('error', 'Error publishing event to redis', err);
-    // }
-  }
-
   private async updateRemainingTakerTokenAmountForOrderInDatabase(
     orderHash: string,
     filledTakerTokenAmount: BigNumber
@@ -336,19 +283,6 @@ export class PostgresRelay implements Relay {
       SET taker_token_remaining_amount = taker_token_remaining_amount - ${filledTakerTokenAmount.toString()}
       WHERE order_hash = ${orderHash};
     `);
-  }
-
-  private async getRemainingTakerAmount(
-    orderHash: string,
-    originalTakerTokenAmount: BigNumber
-  ): Promise<BigNumber> {
-    const takerAmountUnavailable = await this.zeroEx.exchange.getUnavailableTakerAmountAsync(
-      orderHash
-    );
-    const takerAmountRemaining = originalTakerTokenAmount.sub(
-      new BigNumber(takerAmountUnavailable)
-    );
-    return takerAmountRemaining;
   }
 
   // consolidate with getOrder
@@ -405,18 +339,6 @@ export class PostgresRelay implements Relay {
     }
     this.logger.log(level, message, meta);
   }
-}
-
-
-export interface PostgresRelayOptions {
-  postgresPool: Pool;
-  orderTableName: string;
-  tokenTableName: string;
-  tokenPairTableName: string;
-  zeroEx: ZeroEx;
-  logger?: Logger;
-  redisSubscriber: RedisClient;
-  redisPublisher: RedisClient;
 }
 
 export interface PostgresOrderModel {

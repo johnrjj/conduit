@@ -2,7 +2,7 @@ import * as WebSocket from 'ws';
 import { Request, NextFunction } from 'express';
 import { RedisClient } from 'redis';
 import { Message, SubscribeRequest } from './types';
-import { Relay } from '../clients/types';
+import { Relay } from '../client/types';
 import { Logger } from '../../util/logger';
 
 export class WebSocketNode {

@@ -12,8 +12,8 @@ import { BigNumber } from 'bignumber.js';
 import { Pool } from 'pg';
 import { PassThrough } from 'stream';
 import { ZeroEx, ExchangeEvents } from '0x.js';
-import { Relay } from './modules/clients/types';
-import { PostgresRelay } from './modules/clients/postgres';
+import { Relay } from './modules/client/types';
+import { ConduitRelay } from './modules/client/relay';
 import { OrderWatcher } from './modules/order-watcher/handler';
 import v0ApiRouteFactory from './modules/rest-api';
 import { WebSocketNode } from './modules/ws-api';
@@ -21,6 +21,8 @@ import { RoutingError } from './types';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 import { populateDatabase } from './sample-data/generate-data';
 import config from './config';
+import { PostgresRepository, Repository } from './modules/client/repository/postgres';
+import { RedisPublisher } from './modules/client/publisher/publisher';
 BigNumber.config({
   EXPONENTIAL_AT: 1000,
 });
@@ -52,7 +54,8 @@ const createApp = async () => {
   logger.log('debug', 'Connected to Redis instance');
 
   // Set up Relay Client (Postgres flavor)
-  let relayClient: Relay;
+
+  let repository: Repository;
   try {
     const pool = config.DATABASE_URL
       ? new Pool({ connectionString: config.DATABASE_URL })
@@ -63,7 +66,7 @@ const createApp = async () => {
           password: config.PGPASSWORD,
           database: config.PGDATABASE,
         });
-    relayClient = new PostgresRelay({
+        repository = new PostgresRepository({
       postgresPool: pool,
       orderTableName: config.PG_ORDERS_TABLE_NAME || 'orders',
       tokenTableName: config.PG_TOKENS_TABLE_NAME || 'tokens',
@@ -76,21 +79,23 @@ const createApp = async () => {
     await pool.connect();
     logger.log('verbose', `Connected to Postgres database`);
     if (config.PG_POPULATE_DATABASE) {
-      populateDatabase(relayClient, zeroEx, logger);
+      populateDatabase(repository, zeroEx, logger);
       logger.log('verbose', 'Populated Postgres database');
     }
   } catch (e) {
     logger.log('error', 'Error connecting to Postgres', e);
     throw e;
   }
+  const publisher = new RedisPublisher({ redisPublisher });
+  const conduit  = new ConduitRelay({ zeroEx, repository, logger, publisher });
   logger.log('debug', `Connected to Relay client`);
 
   // Set up order watcher
-  const orderWatcher = new OrderWatcher(zeroEx, relayClient, redisPublisher, redisSubscriber, logger);
-  logger.log('debug', `Connected to OrderWatcher`);
-  const orders = await relayClient.getOrders({ isOpen: true });
-  await orderWatcher.watchOrderBatch(orders);
-  logger.log('debug', `Subscribed to updates for all ${orders.length} open orders`);
+  // const orderWatcher = new OrderWatcher(zeroEx, relayClient, redisPublisher, redisSubscriber, logger);
+  // logger.log('debug', `Connected to OrderWatcher`);
+  // const orders = await relayClient.getOrders({ isOpen: true });
+  // await orderWatcher.watchOrderBatch(orders);
+  // logger.log('debug', `Subscribed to updates for all ${orders.length} open orders`);
 
   // Set up express application (REST/WS endpoints)
   const app = express();
@@ -103,7 +108,7 @@ const createApp = async () => {
 
   app.get('/healthcheck', (req, res) => res.sendStatus(200));
   app.get('/', (req, res) => res.send('Welcome to the Conduit Relay API'));
-  app.use('/api/v0', v0ApiRouteFactory(relayClient, zeroEx, logger));
+  app.use('/api/v0', v0ApiRouteFactory(conduit, zeroEx, logger));
   logger.log('verbose', 'Configured REST endpoints');
 
   const wss = expressWs.getWss('/ws');
@@ -112,7 +117,7 @@ const createApp = async () => {
     wss,
     redisPublisher,
     redisSubscriber,
-    relay: relayClient,
+    relay: conduit,
   });
   (app as any).ws('/ws', (ws, req, next) => webSocketNode.acceptConnection(ws, req, next));
   logger.log('verbose', 'Configured WebSocket endpoints');

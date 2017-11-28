@@ -1,5 +1,5 @@
 import { ZeroEx, Token } from '0x.js';
-import { Relay } from '../modules/clients/types';
+import { Relay } from '../modules/client/types';
 
 // O(n^2)
 const pairTokens = (arr: Array<Token>): Array<Array<string>> => {
@@ -26,16 +26,16 @@ const generateWethQuotePairsOnly = (tokens: Array<Token>): Array<Array<string>> 
   return tokenPairsWithWethAsQuote;
 };
 
-const populateTokenTable = async (db: Relay, zeroEx: ZeroEx) => {
+const populateTokenTable = async (relay: Relay, zeroEx: ZeroEx) => {
   const tokens = await generateTokens(zeroEx);
-  await Promise.all(tokens.map(db.addToken.bind(db)));
+  await Promise.all(tokens.map(relay.addToken.bind(relay)));
 };
 
-const populateTokenPairTable = async (db: Relay, zeroEx: ZeroEx) => {
+const populateTokenPairTable = async (relay: Relay, zeroEx: ZeroEx) => {
   const tokens = await generateTokens(zeroEx);
   const tokenPairs = generateTokenPairsFromTokens(tokens);
   await Promise.all(
-    tokenPairs.map(([baseToken, quoteToken]) => db.addTokenPair(baseToken, quoteToken))
+    tokenPairs.map(([baseToken, quoteToken]) => relay.addTokenPair(baseToken, quoteToken))
   );
 };
 

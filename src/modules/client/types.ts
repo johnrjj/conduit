@@ -1,5 +1,5 @@
 import { Duplex } from 'stream';
-import { SignedOrder, Token } from '0x.js';
+import { SignedOrder, Token, ZeroEx } from '0x.js';
 import { BigNumber } from 'bignumber.js';
 import {
   OrderbookPair,
@@ -9,6 +9,10 @@ import {
   FeeQueryRequest,
   FeeQueryResponse,
 } from '../../types';
+import { Repository } from './repository/postgres';
+import { Logger } from '../../util/logger';
+import { Publisher } from './publisher/publisher';
+
 
 // not currently exported by 0x;
 export interface OrderRelevantState {
@@ -21,6 +25,14 @@ export interface OrderRelevantState {
   remainingFillableMakerTokenAmount: BigNumber;
   remainingFillableTakerTokenAmount: BigNumber;
 }
+
+export interface RelayConfiguration {
+  repository: Repository;
+  zeroEx: ZeroEx;
+  logger?: Logger;
+  publisher?: Publisher;
+}
+
 
 export interface Relay {
   getTokenPairs(o?: PaginationOptions): Promise<Array<TokenPair>>;
