@@ -1,187 +1,150 @@
 import * as WebSocket from 'ws';
 import { Request, NextFunction } from 'express';
-import { RedisClient } from 'redis';
-import { Message, SubscribeRequest } from './types';
+import {
+  WebSocketMessage,
+  SubscribeRequest,
+  OrderbookSnapshot,
+  AvailableMessageTypes,
+} from './types';
+import { Publisher } from '../publisher';
+import { Subscriber } from '../subscriber';
 import { Relay } from '../client/types';
 import { Logger } from '../../util/logger';
 
+interface ConnectionContext {
+  socket: WebSocket;
+  initialized: boolean;
+  subscriptions: Array<string>;
+}
+
 export class WebSocketNode {
   private wsServerRef: WebSocket.Server;
-  private channelSubscriptions: Map<string, Set<WebSocket>>;
-  private redisSubscriber: RedisClient;
-  private redisPublisher: RedisClient;
+  private publisher: Publisher;
+  private subscriber: Subscriber;
   private relay: Relay;
   private logger?: Logger;
-
+  private connections: Set<ConnectionContext>;
   constructor({
-    wss,
-    redisPublisher,
-    redisSubscriber,
     relay,
+    wss,
+    publisher,
+    subscriber,
     logger,
   }: {
-    wss: WebSocket.Server;
-    redisSubscriber: RedisClient;
-    redisPublisher: RedisClient;
     relay: Relay;
+    wss: WebSocket.Server;
+    publisher: Publisher;
+    subscriber: Subscriber;
     logger?: Logger;
   }) {
-    this.wsServerRef = wss;
-    this.redisSubscriber = redisSubscriber;
-    this.redisPublisher = redisPublisher;
     this.relay = relay;
+    this.wsServerRef = wss;
+    this.publisher = publisher;
+    this.subscriber = subscriber;
     this.logger = logger;
-    this.channelSubscriptions = new Map();
+    this.connections = new Set();
 
-    this.redisSubscriber.on('message', (channel, message) => {
-      this.log('verbose', `WebSocket server received redis message: ${channel}`, message);
-      if (!this.channelSubscriptions.has(channel)) {
-        return;
-      }
-      const subscribers = this.channelSubscriptions.get(channel);
-      if (!subscribers) {
-        return;
-      }
-      subscribers.forEach(ws => ws.send(message));
+    const subId = this.subscriber.subscribe('Order.Update', payload => {
+      // todo, refactor messaging across modules...
+      console.log(payload);
     });
-
-    this.startHeartbeat();
   }
 
-  public async acceptConnection(ws: WebSocket, req: Request, next: NextFunction): Promise<void> {
-    try {
-      this.log('debug', `WebSocket connection connected and registered`);
-      ws.on('close', n => this.removeClientWebSocketConnection(ws));
-      ws.on('message', async message => {
-        this.log('verbose', 'WebSocket server received message from a client WebSocket', message);
-        const data = JSON.parse(message.toString());
-        switch (data.type) {
-          case 'subscribe':
-            this.log('debug', `WebSocket subscribe request received`);
-            const subscribeRequest = data as Message<SubscribeRequest>;
-            await this.handleChannelSubscribeRequest(ws, subscribeRequest);
-            break;
-          default:
-            this.log(
-              'debug',
-              `Unrecognized message type ${data.type} received from client websocket`
-            );
-            break;
-        }
-      });
-    } catch (e) {
-      this.log('error', 'Error setting up websocket client', e);
-      next(e);
-    }
+  public async connectionHandler(
+    socket: WebSocket,
+    req: Request,
+    next: NextFunction
+  ): Promise<void> {
+    this.log('verbose', 'WebSocket client connected to WebSocket Server');
+    const connectionContext: ConnectionContext = { socket, subscriptions: [], initialized: false };
+    socket.on('error', err => this.log('error', JSON.stringify(err)));
+    socket.on('close', this.handleDisconnectFromClientSocket(connectionContext));
+    socket.on('message', this.onMessageFromClientSocket(connectionContext));
+    this.connections.add(connectionContext);
   }
 
-  private startHeartbeat() {
-    const sendHeartbeatToAllOpenConnections = () =>
-      this.wsServerRef.clients.forEach(ws => {
-        if (ws.readyState == ws.OPEN) {
-          ws.send(JSON.stringify({ type: 'heartbeat' }));
-        }
-      });
+  private onMessageFromClientSocket(connectionContext: ConnectionContext) {
+    return message => {
+      if (!connectionContext.initialized) {
+        this.sendKeepAlive(connectionContext);
+        const keepAliveTimer = setInterval(() => {
+          if (connectionContext.socket.readyState === WebSocket.OPEN) {
+            this.sendKeepAlive(connectionContext);
+          } else {
+            clearInterval(keepAliveTimer);
+            if (this.connections.has(connectionContext)) {
+              this.log('debug', 'Keepalive found a stale connection, removing');
+              this.handleDisconnectFromClientSocket(connectionContext);
+            }
+          }
+        }, 20000);
+        connectionContext.initialized = true;
+      }
 
-    setInterval(() => {
-      this.log('verbose', 'Sending heartbeat to all open client websocket connections');
-      sendHeartbeatToAllOpenConnections();
-    }, 20000);
-  }
-  3;
-
-  private async handleChannelSubscribeRequest(ws: WebSocket, message: Message<SubscribeRequest>) {
-    const { channel, type, payload } = message;
-    const { baseTokenAddress, quoteTokenAddress, limit, snapshot } = payload;
-    this.log('verbose', `User has requested ${channel} subscription with the following details:`);
-    this.log('verbose', `\tBase token: ${baseTokenAddress}`);
-    this.log('verbose', `\tQuote token: ${quoteTokenAddress}`);
-    this.log('verbose', `\tInclude snapshot: ${snapshot}, Snapshot limit: ${limit}`);
-
-    // subscribe to update & fill channels for token pair
-    const updateChannelHash = `${channel}.update:${baseTokenAddress}:${quoteTokenAddress}`;
-    const fillChannelHash = `${channel}.fill:${baseTokenAddress}:${quoteTokenAddress}`;
-    this.addClientChannelSubscription(ws, updateChannelHash);
-    this.addClientChannelSubscription(ws, fillChannelHash);
-    // Temporary - will use redis to communicate/request to snapshot relay db
-    // subscribe to snapshot channel for token pair
-    if (snapshot) {
-      const snapshotChannelHash = `${channel}.snapshot:${baseTokenAddress}:${quoteTokenAddress}`;
-      this.addClientChannelSubscription(ws, snapshotChannelHash);
-      this.log('verbose', `Generating and sending snapshot for channel ${snapshotChannelHash}`);
-      const orderbook = await this.relay.getOrderbook(baseTokenAddress, quoteTokenAddress);
-      const message = this.packageMessage({
-        type: 'snapshot',
-        channel: 'orderbook',
-        payload: orderbook,
-        channelId: 0,
-      });
-      this.redisPublisher.publish(snapshotChannelHash, JSON.stringify(message));
-    }
-  }
-
-  private packageMessage({ type, channel, channelId, payload }) {
-    return {
-      type: 'snapshot',
-      channel: 'orderbook',
-      // "channelId": 1,
-      payload,
+      this.log('verbose', 'WebSocket server received message from a client WebSocket', message);
+      let data = { type: 'default ' };
+      try {
+        data = JSON.parse(message.toString());
+      } catch {
+        data = message;
+      }
+      switch (data.type) {
+        case 'subscribe':
+          this.log('debug', `WebSocket subscribe request received`);
+          const subscribeRequest = data as WebSocketMessage<SubscribeRequest>;
+          this.handleSubscriptionRequest(connectionContext, subscribeRequest);
+          break;
+        default:
+          this.log(
+            'debug',
+            `Unrecognized message type ${data.type} received from client websocket`
+          );
+          break;
+      }
     };
   }
 
-  private addClientChannelSubscription(ws: WebSocket, channelToSubscribeTo: string) {
-    if (!this.channelSubscriptions.has(channelToSubscribeTo)) {
-      this.log(
-        'verbose',
-        `First client to subscribe to ${channelToSubscribeTo}, setting up channel`
-      );
-      this.channelSubscriptions.set(channelToSubscribeTo, new Set<WebSocket>());
-    }
-    const subscriptions = this.channelSubscriptions.get(channelToSubscribeTo) as Set<WebSocket>;
-
-    if (subscriptions && subscriptions.size < 1) {
-      this.redisSubscriber.subscribe(channelToSubscribeTo);
-      this.log('verbose', `WebSocket server node subscribed to ${channelToSubscribeTo}`);
-    }
-    if (subscriptions.has(ws)) {
-      this.log('verbose', `WebSocket server node already subscribed to ${channelToSubscribeTo}`);
-    }
-    subscriptions.add(ws);
-    this.channelSubscriptions.set(channelToSubscribeTo, subscriptions);
-    this.log('verbose', `WebSocket client subscribed to ${channelToSubscribeTo}`);
-
-    this.log('debug', `Added a subscription for ${channelToSubscribeTo}`);
+  private handleDisconnectFromClientSocket(context: ConnectionContext) {
+    return (code: number, reason: string) => {
+      this.log('verbose', `WebSocket connection closed with code ${code}`, reason) ||
+        this.connections.delete(context);
+    };
   }
 
-  private removeClientWebSocketConnection(ws: WebSocket) {
-    this.channelSubscriptions.forEach((channelSubscribers, channel) => {
-      if (channelSubscribers.has(ws)) {
-        this.removeClientChannelSubscription(ws, channel);
-      }
-    });
-    this.pruneChannels();
-    this.log('debug', 'Websocket disconnected, unregistered subscriptions');
-  }
+  private handleSubscriptionRequest(
+    context: ConnectionContext,
+    subscriptionRequest: WebSocketMessage<SubscribeRequest>
+  ) {
+    const { channel, type, payload } = subscriptionRequest;
+    const { baseTokenAddress, quoteTokenAddress, limit, snapshot: snapshotRequested } = payload;
+    const subscriptionChannel = `${baseTokenAddress}-${quoteTokenAddress}`;
+    context.subscriptions.push(subscriptionChannel);
+    const channelId = context.subscriptions.length;
 
-  private removeClientChannelSubscription(ws, channelName) {
-    const channelSubscribers = this.channelSubscriptions.get(channelName);
-    if (channelSubscribers && channelSubscribers.has(ws)) {
-      this.log('verbose', `Removed a subscription for ${channelName}`);
-      channelSubscribers.delete(ws);
+    if (snapshotRequested) {
+      this.relay
+        .getOrderbook(baseTokenAddress, quoteTokenAddress)
+        .then(snapshot => {
+          const message: WebSocketMessage<OrderbookSnapshot> = {
+            type: 'snapshot',
+            channel: 'orderbook',
+            channelId,
+            payload: snapshot,
+          };
+          this.sendMessage(context, message);
+        })
+        .catch(e => this.log('error', `Error getting snapshot for ${subscriptionChannel}`));
     }
   }
 
-  private pruneChannels() {
-    const channelsToRemove: Array<string> = [];
-    this.channelSubscriptions.forEach((subscribers, channelName) => {
-      if (subscribers.size === 0) {
-        channelsToRemove.push(channelName);
-      }
-    });
-    channelsToRemove.forEach(channel => {
-      this.channelSubscriptions.delete(channel);
-      this.log('verbose', `Removed WebSocket Server's subscription to ${channel}`);
-    });
+  private sendKeepAlive(connectionContext: ConnectionContext): void {
+    this.sendMessage(connectionContext, { type: 'keepalive', channel: 'keepalive', payload: {} });
+  }
+
+  private sendMessage(connectionContext: ConnectionContext, message: WebSocketMessage<any>): void {
+    if (message && connectionContext.socket.readyState === WebSocket.OPEN) {
+      connectionContext.socket.send(JSON.stringify(message));
+    }
   }
 
   private log(level: string, message: string, meta?: any) {

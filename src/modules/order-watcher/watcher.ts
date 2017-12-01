@@ -4,9 +4,6 @@ import { Relay } from '../client/types';
 import { Logger } from '../../util/logger';
 import { serializeSignedOrder } from '../../util/order';
 
-// convenience type
-type OrderHash = string;
-
 export class OrderWatcher {
   private watchedOrders: Set<OrderHash> = new Set();
 
@@ -88,6 +85,9 @@ export class OrderWatcher {
     this.logger.log(level, message, meta);
   }
 }
+
+// convenience type
+export type OrderHash = string;
 
 const isOrderStateValid = (orderState: OrderState): orderState is OrderStateValid =>
   orderState.isValid;

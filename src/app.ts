@@ -12,15 +12,15 @@ import { BigNumber } from 'bignumber.js';
 import { Pool } from 'pg';
 import { ZeroEx } from '0x.js';
 import { ConduitRelay } from './modules/client';
-// import { OrderWatcher } from './modules/order-watcher';
+import { PostgresRepository, Repository } from './modules/repository';
+import { RedisPublisher } from './modules/publisher';
+import { RedisSubscriber } from './modules/subscriber/index';
 import v0ApiRouteFactory from './modules/rest-api';
 import { WebSocketNode } from './modules/ws-api';
+// import { OrderWatcher } from './modules/order-watcher';
 import { RoutingError } from './types';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
-import { populateDatabase } from './sample-data/generate-data';
 import config from './config';
-import { PostgresRepository, Repository } from './modules/repository';
-import { RedisPublisher } from './modules/publisher/publisher';
 BigNumber.config({
   EXPONENTIAL_AT: 1000,
 });
@@ -51,6 +51,9 @@ const createApp = async () => {
   // Set up Redis
   const redisPublisher = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
   const redisSubscriber = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
+
+  const publisher = new RedisPublisher({ redisPublisher });
+  const subscriber = new RedisSubscriber({ redisSubscriber });
   logger.log('debug', 'Connected to Redis instance');
 
   // Set up Relay Client (Postgres flavor)
@@ -77,15 +80,10 @@ const createApp = async () => {
     });
     await pool.connect();
     logger.log('debug', `Connected to Postgres database`);
-    if (config.PG_POPULATE_DATABASE) {
-      populateDatabase(repository, zeroEx, logger);
-      logger.log('verbose', 'Populated Postgres database');
-    }
   } catch (e) {
     logger.log('error', 'Error connecting to Postgres', e);
     throw e;
   }
-  const publisher = new RedisPublisher({ redisPublisher });
   const conduit = new ConduitRelay({ zeroEx, repository, logger, publisher });
   logger.log('debug', `Connected to Relay client`);
 
@@ -115,11 +113,11 @@ const createApp = async () => {
   const webSocketNode = new WebSocketNode({
     logger,
     wss,
-    redisPublisher,
-    redisSubscriber,
+    publisher,
+    subscriber,
     relay: conduit,
   });
-  (app as any).ws('/ws', (ws, req, next) => webSocketNode.acceptConnection(ws, req, next));
+  (app as any).ws('/ws', (ws, req, next) => webSocketNode.connectionHandler(ws, req, next));
   logger.log('verbose', 'Configured WebSocket endpoints');
 
   app.use((req: Request, res: Response, next: NextFunction) => {
