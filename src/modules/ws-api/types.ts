@@ -10,6 +10,7 @@ export interface Message<
 > {
   type: MessageType;
   channel: ChannelType;
+  channelId?: number;
   payload: T;
 }
 

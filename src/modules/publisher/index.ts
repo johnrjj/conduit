@@ -1,2 +1,2 @@
-import { Publisher } from './publisher';
-export { Publisher };
+import { Publisher, RedisPublisher } from './publisher';
+export { Publisher, RedisPublisher };
