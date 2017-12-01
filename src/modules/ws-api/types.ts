@@ -1,12 +1,12 @@
 import { SignedOrder } from '0x.js';
 import { SerializedSignedOrder, SerializedSignedOrderWithCurrentBalance } from '../../types';
 
-type MessageType = 'update' | 'snapshot' | 'fill';
+type MessageType = 'update' | 'snapshot' | 'fill' | 'keepalive';
 
-type ChannelType = 'orderbook';
+type ChannelType = 'orderbook' | 'keepalive';
 
-export interface Message<
-  T extends SubscribeRequest | OrderbookSnapshot | OrderbookUpdate | OrderbookFill
+export interface WebSocketMessage<
+  T extends SubscribeRequest | OrderbookSnapshot | OrderbookUpdate | OrderbookFill | Object
 > {
   type: MessageType;
   channel: ChannelType;
@@ -36,7 +36,7 @@ export interface OrderbookFill extends SerializedSignedOrderWithCurrentBalance {
 }
 
 export type AvailableMessageTypes =
-  | Message<SubscribeRequest>
-  | Message<OrderbookSnapshot>
-  | Message<OrderbookUpdate>
-  | Message<OrderbookFill>;
+  | WebSocketMessage<SubscribeRequest>
+  | WebSocketMessage<OrderbookSnapshot>
+  | WebSocketMessage<OrderbookUpdate>
+  | WebSocketMessage<OrderbookFill>;

@@ -1,6 +1,11 @@
 import * as WebSocket from 'ws';
 import { Request, NextFunction } from 'express';
-import { Message, SubscribeRequest, OrderbookSnapshot, AvailableMessageTypes } from './types';
+import {
+  WebSocketMessage,
+  SubscribeRequest,
+  OrderbookSnapshot,
+  AvailableMessageTypes,
+} from './types';
 import { Publisher } from '../publisher';
 import { Subscriber } from '../subscriber';
 import { Relay } from '../client/types';
@@ -8,6 +13,7 @@ import { Logger } from '../../util/logger';
 
 interface ConnectionContext {
   socket: WebSocket;
+  initialized: boolean;
   subscriptions: Array<string>;
 }
 
@@ -38,7 +44,6 @@ export class WebSocketNode {
     this.logger = logger;
     this.connections = new Set();
 
-    this.startHeartbeat();
     const subId = this.subscriber.subscribe('Order.Update', payload => {
       // todo, refactor messaging across modules...
       console.log(payload);
@@ -51,22 +56,43 @@ export class WebSocketNode {
     next: NextFunction
   ): Promise<void> {
     this.log('verbose', 'WebSocket client connected to WebSocket Server');
-    const context: ConnectionContext = { socket, subscriptions: [] };
+    const connectionContext: ConnectionContext = { socket, subscriptions: [], initialized: false };
     socket.on('error', err => this.log('error', JSON.stringify(err)));
-    socket.on('close', this.onDisconnectFromClientSocket(context));
-    socket.on('message', this.onMessageFromClientSocket(context));
-    this.connections.add(context);
+    socket.on('close', this.handleDisconnectFromClientSocket(connectionContext));
+    socket.on('message', this.onMessageFromClientSocket(connectionContext));
+    this.connections.add(connectionContext);
   }
 
-  private onMessageFromClientSocket(context: ConnectionContext) {
+  private onMessageFromClientSocket(connectionContext: ConnectionContext) {
     return message => {
+      if (!connectionContext.initialized) {
+        this.sendKeepAlive(connectionContext);
+        const keepAliveTimer = setInterval(() => {
+          if (connectionContext.socket.readyState === WebSocket.OPEN) {
+            this.sendKeepAlive(connectionContext);
+          } else {
+            clearInterval(keepAliveTimer);
+            if (this.connections.has(connectionContext)) {
+              this.log('debug', 'Keepalive found a stale connection, removing');
+              this.handleDisconnectFromClientSocket(connectionContext);
+            }
+          }
+        }, 20000);
+        connectionContext.initialized = true;
+      }
+
       this.log('verbose', 'WebSocket server received message from a client WebSocket', message);
-      const data = JSON.parse(message.toString());
+      let data = { type: 'default ' };
+      try {
+        data = JSON.parse(message.toString());
+      } catch {
+        data = message;
+      }
       switch (data.type) {
         case 'subscribe':
           this.log('debug', `WebSocket subscribe request received`);
-          const subscribeRequest = data as Message<SubscribeRequest>;
-          this.handleSubscriptionRequest(context, subscribeRequest);
+          const subscribeRequest = data as WebSocketMessage<SubscribeRequest>;
+          this.handleSubscriptionRequest(connectionContext, subscribeRequest);
           break;
         default:
           this.log(
@@ -78,7 +104,7 @@ export class WebSocketNode {
     };
   }
 
-  private onDisconnectFromClientSocket(context: ConnectionContext) {
+  private handleDisconnectFromClientSocket(context: ConnectionContext) {
     return (code: number, reason: string) => {
       this.log('verbose', `WebSocket connection closed with code ${code}`, reason) ||
         this.connections.delete(context);
@@ -87,7 +113,7 @@ export class WebSocketNode {
 
   private handleSubscriptionRequest(
     context: ConnectionContext,
-    subscriptionRequest: Message<SubscribeRequest>
+    subscriptionRequest: WebSocketMessage<SubscribeRequest>
   ) {
     const { channel, type, payload } = subscriptionRequest;
     const { baseTokenAddress, quoteTokenAddress, limit, snapshot: snapshotRequested } = payload;
@@ -99,7 +125,7 @@ export class WebSocketNode {
       this.relay
         .getOrderbook(baseTokenAddress, quoteTokenAddress)
         .then(snapshot => {
-          const message: Message<OrderbookSnapshot> = {
+          const message: WebSocketMessage<OrderbookSnapshot> = {
             type: 'snapshot',
             channel: 'orderbook',
             channelId,
@@ -111,22 +137,11 @@ export class WebSocketNode {
     }
   }
 
-  private startHeartbeat() {
-    const sendHeartbeatToAllOpenConnections = () =>
-      this.wsServerRef.clients.forEach(ws => {
-        if (ws.readyState == ws.OPEN) {
-          ws.send(JSON.stringify({ type: 'heartbeat' }));
-        }
-      });
-
-    setInterval(() => {
-      this.log('verbose', 'Sending heartbeat to all open client websocket connections');
-      sendHeartbeatToAllOpenConnections();
-    }, 20000);
+  private sendKeepAlive(connectionContext: ConnectionContext): void {
+    this.sendMessage(connectionContext, { type: 'keepalive', channel: 'keepalive', payload: {} });
   }
-  3;
 
-  private sendMessage(connectionContext: ConnectionContext, message: Message<any>): void {
+  private sendMessage(connectionContext: ConnectionContext, message: WebSocketMessage<any>): void {
     if (message && connectionContext.socket.readyState === WebSocket.OPEN) {
       connectionContext.socket.send(JSON.stringify(message));
     }

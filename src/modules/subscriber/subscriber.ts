@@ -22,7 +22,9 @@ export class RedisSubscriber implements Subscriber {
   private handleMessage(channel: string, message: string) {
     const subscribers = this.subsRefsMap[channel];
 
-    if (!subscribers || !subscribers.length) return;
+    if (!subscribers || !subscribers.length) {
+      return;
+    }
 
     let parsedMessage;
     try {
