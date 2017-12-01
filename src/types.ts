@@ -58,8 +58,8 @@ export interface TokenInfo {
 }
 
 export interface PaginationOptions {
-  page: number;
-  perPage: number;
+  page?: number;
+  perPage?: number;
 }
 
 export interface OrderFilterOptions extends PaginationOptions {

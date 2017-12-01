@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index",
-    "dev": "ts-node --inspect src/index",
+    "dev": "ts-node src/index",
     "test": "jest",
     "prettier": "prettier --single-quote --print-width 100 --trailing-comma es5 --write 'src/**/*.ts'",
     "deploy": "now && now alias && now 0x-relayer-api --safe",
@@ -17,7 +17,7 @@
     "start:docker": "docker-compose up"
   },
   "dependencies": {
-    "0x.js": "^0.26.0",
+    "0x.js": "^0.27.1",
     "@0xproject/json-schemas": "^0.6.7",
     "bignumber.js": "^4.1.0",
     "body-parser": "^1.18.2",

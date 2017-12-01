@@ -2,7 +2,7 @@ import * as WebSocket from 'ws';
 import { Request, NextFunction } from 'express';
 import { RedisClient } from 'redis';
 import { Message, SubscribeRequest } from './types';
-import { Relay } from '../relay';
+import { Relay } from '../client/types';
 import { Logger } from '../../util/logger';
 
 export class WebSocketNode {
@@ -44,6 +44,8 @@ export class WebSocketNode {
       }
       subscribers.forEach(ws => ws.send(message));
     });
+
+    this.startHeartbeat();
   }
 
   public async acceptConnection(ws: WebSocket, req: Request, next: NextFunction): Promise<void> {
@@ -72,6 +74,21 @@ export class WebSocketNode {
       next(e);
     }
   }
+
+  private startHeartbeat() {
+    const sendHeartbeatToAllOpenConnections = () =>
+      this.wsServerRef.clients.forEach(ws => {
+        if (ws.readyState == ws.OPEN) {
+          ws.send(JSON.stringify({ type: 'heartbeat' }));
+        }
+      });
+
+    setInterval(() => {
+      this.log('verbose', 'Sending heartbeat to all open client websocket connections');
+      sendHeartbeatToAllOpenConnections();
+    }, 20000);
+  }
+  3;
 
   private async handleChannelSubscribeRequest(ws: WebSocket, message: Message<SubscribeRequest>) {
     const { channel, type, payload } = message;
@@ -125,6 +142,9 @@ export class WebSocketNode {
     if (subscriptions && subscriptions.size < 1) {
       this.redisSubscriber.subscribe(channelToSubscribeTo);
       this.log('verbose', `WebSocket server node subscribed to ${channelToSubscribeTo}`);
+    }
+    if (subscriptions.has(ws)) {
+      this.log('verbose', `WebSocket server node already subscribed to ${channelToSubscribeTo}`);
     }
     subscriptions.add(ws);
     this.channelSubscriptions.set(channelToSubscribeTo, subscriptions);

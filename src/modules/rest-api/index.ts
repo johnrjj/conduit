@@ -2,13 +2,8 @@ import * as bodyParser from 'body-parser';
 import { Router } from 'express';
 import { ZeroEx } from '0x.js';
 import { mapOrderApiPayloadToSignedOrder, mapZeroExPortalOrderJSONToSignedOrder } from './util';
-import { Relay } from '../relay';
-import {
-  PaginationOptions,
-  OrderFilterOptions,
-  FeeQueryRequest,
-  FeeQueryResponse,
-} from '../../types';
+import { Relay } from '../client/types';
+import { OrderFilterOptions, FeeQueryRequest, FeeQueryResponse } from '../../types';
 import { validateEndpointSignedOrderBySchema } from '../../util/validate';
 import { Logger } from '../../util/logger';
 import { OrderPayload, ApiOrderbookOptions, ZeroExPortalOrderJSON } from './types';
