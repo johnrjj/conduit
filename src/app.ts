@@ -10,19 +10,17 @@ import { createClient } from 'redis';
 import { Request, Response, NextFunction } from 'express';
 import { BigNumber } from 'bignumber.js';
 import { Pool } from 'pg';
-import { PassThrough } from 'stream';
-import { ZeroEx, ExchangeEvents } from '0x.js';
-import { Relay } from './modules/client/types';
-import { ConduitRelay } from './modules/client/relay';
-import { OrderWatcher } from './modules/order-watcher/handler';
+import { ZeroEx } from '0x.js';
+import { ConduitRelay } from './modules/client';
+// import { OrderWatcher } from './modules/order-watcher';
 import v0ApiRouteFactory from './modules/rest-api';
 import { WebSocketNode } from './modules/ws-api';
 import { RoutingError } from './types';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 import { populateDatabase } from './sample-data/generate-data';
 import config from './config';
-import { PostgresRepository, Repository } from './modules/client/repository/postgres';
-import { RedisPublisher } from './modules/client/publisher/publisher';
+import { PostgresRepository, Repository } from './modules/repository';
+import { RedisPublisher } from './modules/publisher/publisher';
 BigNumber.config({
   EXPONENTIAL_AT: 1000,
 });
@@ -44,6 +42,8 @@ const createApp = async () => {
 
   // Set up ZeroEx
   const zeroEx = new ZeroEx(providerEngine, {
+    // todo: figure out how to get this dynamically...
+    networkId: 42,
     orderWatcherConfig: { eventPollingIntervalMs: 1000 },
   });
   logger.log('verbose', 'ZeroEx client set up');
@@ -54,7 +54,6 @@ const createApp = async () => {
   logger.log('debug', 'Connected to Redis instance');
 
   // Set up Relay Client (Postgres flavor)
-
   let repository: Repository;
   try {
     const pool = config.DATABASE_URL
@@ -66,7 +65,7 @@ const createApp = async () => {
           password: config.PGPASSWORD,
           database: config.PGDATABASE,
         });
-        repository = new PostgresRepository({
+    repository = new PostgresRepository({
       postgresPool: pool,
       orderTableName: config.PG_ORDERS_TABLE_NAME || 'orders',
       tokenTableName: config.PG_TOKENS_TABLE_NAME || 'tokens',
@@ -77,7 +76,7 @@ const createApp = async () => {
       redisSubscriber,
     });
     await pool.connect();
-    logger.log('verbose', `Connected to Postgres database`);
+    logger.log('debug', `Connected to Postgres database`);
     if (config.PG_POPULATE_DATABASE) {
       populateDatabase(repository, zeroEx, logger);
       logger.log('verbose', 'Populated Postgres database');
@@ -87,9 +86,10 @@ const createApp = async () => {
     throw e;
   }
   const publisher = new RedisPublisher({ redisPublisher });
-  const conduit  = new ConduitRelay({ zeroEx, repository, logger, publisher });
+  const conduit = new ConduitRelay({ zeroEx, repository, logger, publisher });
   logger.log('debug', `Connected to Relay client`);
 
+  // OrderWatcher doesn't work right now...
   // Set up order watcher
   // const orderWatcher = new OrderWatcher(zeroEx, relayClient, redisPublisher, redisSubscriber, logger);
   // logger.log('debug', `Connected to OrderWatcher`);

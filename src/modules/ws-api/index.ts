@@ -76,17 +76,19 @@ export class WebSocketNode {
   }
 
   private startHeartbeat() {
-    const sendHeartbeatToAllOpenConnections = () => this.wsServerRef.clients.forEach(ws =>{
-      if (ws.readyState == ws.OPEN) {  
-        ws.send(JSON.stringify({type: 'heartbeat'}));
-      }  
-    });
+    const sendHeartbeatToAllOpenConnections = () =>
+      this.wsServerRef.clients.forEach(ws => {
+        if (ws.readyState == ws.OPEN) {
+          ws.send(JSON.stringify({ type: 'heartbeat' }));
+        }
+      });
 
     setInterval(() => {
-      this.log('verbose', 'Sending heartbeat to all open client websocket connections');      
+      this.log('verbose', 'Sending heartbeat to all open client websocket connections');
       sendHeartbeatToAllOpenConnections();
     }, 20000);
-  };3
+  }
+  3;
 
   private async handleChannelSubscribeRequest(ws: WebSocket, message: Message<SubscribeRequest>) {
     const { channel, type, payload } = message;

@@ -2,12 +2,12 @@
 # yarn lockfile v1
 
 
-"0x.js@^0.26.1":
-  version "0.26.1"
-  resolved "https://registry.yarnpkg.com/0x.js/-/0x.js-0.26.1.tgz#8fcd2a16718ac27f5115a654c2ef153a0d300620"
+"0x.js@^0.27.1":
+  version "0.27.1"
+  resolved "https://registry.yarnpkg.com/0x.js/-/0x.js-0.27.1.tgz#e0dff70e257efbb7f54dddb55dddf2dce0b971ab"
   dependencies:
-    "@0xproject/assert" "^0.0.5"
-    "@0xproject/json-schemas" "^0.6.8"
+    "@0xproject/assert" "^0.0.6"
+    "@0xproject/json-schemas" "^0.6.9"
     bignumber.js "~4.1.0"
     bintrees "^1.0.2"
     bn.js "4.11.8"
@@ -22,11 +22,11 @@
     uuid "^3.1.0"
     web3 "^0.20.0"
 
-"@0xproject/assert@^0.0.5":
-  version "0.0.5"
-  resolved "https://registry.yarnpkg.com/@0xproject/assert/-/assert-0.0.5.tgz#f4802c2938e65bd8ef1768fd5e50bd9dd72646dd"
+"@0xproject/assert@^0.0.6":
+  version "0.0.6"
+  resolved "https://registry.yarnpkg.com/@0xproject/assert/-/assert-0.0.6.tgz#773616620314f40ace11a9c4c65cc95398d2c178"
   dependencies:
-    "@0xproject/json-schemas" "^0.6.8"
+    "@0xproject/json-schemas" "^0.6.9"
     bignumber.js "~4.1.0"
     ethereum-address "^0.0.4"
     lodash "^4.17.4"
@@ -40,9 +40,9 @@
     jsonschema "^1.2.0"
     lodash.values "^4.3.0"
 
-"@0xproject/json-schemas@^0.6.8":
-  version "0.6.8"
-  resolved "https://registry.yarnpkg.com/@0xproject/json-schemas/-/json-schemas-0.6.8.tgz#36ac023a7d8f5d86457bf6be83a719ca10125b9b"
+"@0xproject/json-schemas@^0.6.9":
+  version "0.6.9"
+  resolved "https://registry.yarnpkg.com/@0xproject/json-schemas/-/json-schemas-0.6.9.tgz#b842aa37cac1d7c0d8efbfcaf967edf6b9355253"
   dependencies:
     es6-promisify "^5.0.0"
     jsonschema "^1.2.0"

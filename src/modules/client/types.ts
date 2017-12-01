@@ -1,4 +1,3 @@
-import { Duplex } from 'stream';
 import { SignedOrder, Token, ZeroEx } from '0x.js';
 import { BigNumber } from 'bignumber.js';
 import {
@@ -9,10 +8,9 @@ import {
   FeeQueryRequest,
   FeeQueryResponse,
 } from '../../types';
-import { Repository } from './repository/postgres';
+import { Repository } from '../repository';
 import { Logger } from '../../util/logger';
-import { Publisher } from './publisher/publisher';
-
+import { Publisher } from '../publisher/publisher';
 
 // not currently exported by 0x;
 export interface OrderRelevantState {
@@ -33,7 +31,6 @@ export interface RelayConfiguration {
   publisher?: Publisher;
 }
 
-
 export interface Relay {
   getTokenPairs(o?: PaginationOptions): Promise<Array<TokenPair>>;
   getOrders(options?: OrderFilterOptions): Promise<Array<SignedOrder>>;
@@ -44,5 +41,8 @@ export interface Relay {
   addToken(token: Token): Promise<void>;
   addTokenPair(baseToken: string, quoteToken: string): Promise<void>;
   updateOrder(orderHash: string, orderState: OrderRelevantState): Promise<SignedOrder>;
-  getBaseTokenAndQuoteTokenFromMakerAndTaker(makerTokenAddress: string, takerTokenAddress): Promise<{ baseToken: string, quoteToken: string }>;
+  getBaseTokenAndQuoteTokenFromMakerAndTaker(
+    makerTokenAddress: string,
+    takerTokenAddress
+  ): Promise<{ baseToken: string; quoteToken: string }>;
 }

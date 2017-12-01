@@ -4,7 +4,8 @@ import { Pool } from 'pg';
 import { SQL } from 'sql-template-strings';
 import { ZeroEx, SignedOrder, Token } from '0x.js';
 import { RedisClient } from 'redis';
-import { Relay, OrderRelevantState } from '../types';
+import { Repository } from './types';
+import { Relay, OrderRelevantState } from '../client/types';
 import {
   OrderbookPair,
   ZeroExOrderFillEvent,
@@ -15,21 +16,9 @@ import {
   SignedOrderWithCurrentBalance,
   FeeQueryRequest,
   FeeQueryResponse,
-} from '../../../types';
-import { serializeSignedOrder } from '../../../util/order';
-import { Logger } from '../../../util/logger';
-
-export interface Repository {
-  getTokenPairs();
-  getOrders(options?: OrderFilterOptions);
-  getOrder(orderHash: string);
-  updateOrder(orderHash: string, orderState: OrderRelevantState);
-  getOrderbookForTokenPair(baseTokenAddress: string, quoteTokenAddress: string);
-  addOrder(orderHash: string, takerTokenRemainingAmount: BigNumber, signedOrder: SignedOrder);
-  addToken(token: Token);
-  addTokenPair(baseTokenAddress, quoteTokenAddress);
-  getBaseTokenAndQuoteTokenFromMakerAndTaker(takerTokenAddress: string, makerTokenAddress: string)
-}
+} from '../..//types';
+import { serializeSignedOrder } from '../..//util/order';
+import { Logger } from '../..//util/logger';
 
 export interface PostgresRepositoryOptions {
   postgresPool: Pool;
@@ -41,7 +30,6 @@ export interface PostgresRepositoryOptions {
   redisSubscriber: RedisClient;
   redisPublisher: RedisClient;
 }
-
 
 export class PostgresRepository implements Repository {
   private pool: Pool;
@@ -110,7 +98,7 @@ export class PostgresRepository implements Repository {
     `;
     // todo, support all options after MVP
     if (options && options.isOpen) {
-      query.append(SQL`WHERE taker_token_remaining_amount > 0`)
+      query.append(SQL`WHERE taker_token_remaining_amount > 0`);
     }
     const res = await this.pool.query(query);
     const formattedOrders = res.rows.map(this.formatOrderFromDb);
@@ -183,8 +171,11 @@ export class PostgresRepository implements Repository {
     return freeFee;
   }
 
-  async addOrder(orderHash: string, takerTokenRemainingAmount: BigNumber, signedOrder: SignedOrder): Promise<SignedOrder> {
-
+  async addOrder(
+    orderHash: string,
+    takerTokenRemainingAmount: BigNumber,
+    signedOrder: SignedOrder
+  ): Promise<SignedOrder> {
     try {
       const res = await this.pool.query(SQL`
       INSERT INTO 

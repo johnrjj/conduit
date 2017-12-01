@@ -1,6 +1,6 @@
-import { ZeroEx, SignedOrder, OrderState, OrderStateValid, OrderStateInvalid } from '0x.js';
+import { ZeroEx, SignedOrder, OrderState, OrderStateValid } from '0x.js';
 import { RedisClient } from 'redis';
-import { Relay } from '../clients/types';
+import { Relay } from '../client/types';
 import { Logger } from '../../util/logger';
 import { serializeSignedOrder } from '../../util/order';
 
@@ -15,7 +15,7 @@ export class OrderWatcher {
     private relay: Relay,
     private redisPublisher: RedisClient,
     private redisSubscriber: RedisClient,
-    private logger: Logger,
+    private logger: Logger
   ) {
     this.setupOrderWatcher();
   }
@@ -30,7 +30,7 @@ export class OrderWatcher {
       return;
     }
     this.watchedOrders.add(orderHash);
-    return await this.zeroEx.orderStateWatcher.addOrderAsync(order);
+    return await this.zeroEx.orderStateWatcher.addOrder(order);
   }
 
   private setupOrderWatcher() {
@@ -39,23 +39,44 @@ export class OrderWatcher {
   }
 
   private handleOrderStateUpdate = async (orderState: OrderState) => {
-    this.log('debug', `Received an order update for order hash ${orderState.orderHash}`, orderState);    
+    this.log(
+      'debug',
+      `Received an order update for order hash ${orderState.orderHash}`,
+      orderState
+    );
     if (isOrderStateValid(orderState)) {
       const { orderHash, orderRelevantState } = orderState;
-      this.log('verbose', `Order ${orderHash} update is in a valid state, updating order using relay conduit client`, orderRelevantState);
-      const updatedSignedOrder: SignedOrder = await this.relay.updateOrder(orderHash, orderRelevantState);
+      this.log(
+        'verbose',
+        `Order ${orderHash} update is in a valid state, updating order using relay conduit client`,
+        orderRelevantState
+      );
+      const updatedSignedOrder: SignedOrder = await this.relay.updateOrder(
+        orderHash,
+        orderRelevantState
+      );
       this.log('verbose', `Order ${orderHash} updated in data store`);
-      const { makerTokenAddress, takerTokenAddress }  = updatedSignedOrder;
-      const { baseToken, quoteToken } = await this.relay.getBaseTokenAndQuoteTokenFromMakerAndTaker(makerTokenAddress, takerTokenAddress);
+      const { makerTokenAddress, takerTokenAddress } = updatedSignedOrder;
+      const { baseToken, quoteToken } = await this.relay.getBaseTokenAndQuoteTokenFromMakerAndTaker(
+        makerTokenAddress,
+        takerTokenAddress
+      );
       const serializedUpdatedSignedOrder = serializeSignedOrder(updatedSignedOrder);
       const messageChannel = `orderbook:fill:${baseToken}:${quoteToken}`;
-      const messageContents = JSON.stringify(serializedUpdatedSignedOrder)
+      const messageContents = JSON.stringify(serializedUpdatedSignedOrder);
       this.redisPublisher.publish(messageChannel, messageContents);
-      this.log('verbose', `Order ${orderHash} update complete, emiting event ${messageChannel}`, messageContents);
+      this.log(
+        'verbose',
+        `Order ${orderHash} update complete, emiting event ${messageChannel}`,
+        messageContents
+      );
       return;
     } else {
       const { orderHash, error } = orderState;
-      this.log('verbose', `Order ${orderHash} update is in an invalid state. Not doing anythign right now`);
+      this.log(
+        'verbose',
+        `Order ${orderHash} update is in an invalid state. Not doing anythign right now`
+      );
       return;
     }
   };
@@ -69,4 +90,4 @@ export class OrderWatcher {
 }
 
 const isOrderStateValid = (orderState: OrderState): orderState is OrderStateValid =>
-  (<OrderStateValid>orderState).isValid;
+  orderState.isValid;

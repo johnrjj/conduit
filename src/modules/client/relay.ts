@@ -1,43 +1,25 @@
 import { BigNumber } from 'bignumber.js';
-import { Duplex } from 'stream';
-import { Pool } from 'pg';
-import { SQL } from 'sql-template-strings';
 import { ZeroEx, SignedOrder, Token } from '0x.js';
-import { RedisClient } from 'redis';
-// import { Relay } from './types';
-import { Publisher } from './publisher/publisher';
-import { Repository } from './repository/postgres';
+import { Publisher } from '../publisher';
+import { Repository } from '../repository';
 import { Relay, RelayConfiguration, OrderRelevantState } from './types';
-
 import {
   OrderbookPair,
   ZeroExOrderFillEvent,
-  ZeroExOrderCancelEvent,
   TokenPair,
   OrderFilterOptions,
-  SerializedSignedOrderWithCurrentBalance,
-  SignedOrderWithCurrentBalance,
   FeeQueryRequest,
   FeeQueryResponse,
 } from '../../types';
-import { serializeSignedOrder } from '../../util/order';
 import { Logger } from '../../util/logger';
 
-
-
-
 export class ConduitRelay implements Relay {
-  private repository: Repository;
   private zeroEx: ZeroEx;
-  private logger?: Logger;
+  private repository: Repository;
   private publisher?: Publisher;
+  private logger?: Logger;
 
-  constructor({
-    zeroEx,
-    publisher,
-    repository,
-    logger,
-  }: RelayConfiguration) {
+  constructor({ zeroEx, repository, publisher, logger }: RelayConfiguration) {
     this.zeroEx = zeroEx;
     this.repository = repository;
     this.publisher = publisher;
@@ -93,11 +75,13 @@ export class ConduitRelay implements Relay {
     takerTokenAddress,
     makerTokenAddress
   ): Promise<{ baseToken: string; quoteToken: string }> {
-    return this.repository.getBaseTokenAndQuoteTokenFromMakerAndTaker(takerTokenAddress, makerTokenAddress);
+    return this.repository.getBaseTokenAndQuoteTokenFromMakerAndTaker(
+      takerTokenAddress,
+      makerTokenAddress
+    );
   }
 
   private async handleOrderFillMessage(fillMessage: ZeroExOrderFillEvent) {
-
     // const { orderHash, filledMakerTokenAmount, filledTakerTokenAmount } = fillMessage;
     // this.log(
     //   'debug',
@@ -105,7 +89,6 @@ export class ConduitRelay implements Relay {
     //   FilledMakerAmount: ${filledMakerTokenAmount.toString()}
     //   FilledTakerAmount: ${filledTakerTokenAmount.toString()}`
     // );
-
     // const existingOrder = await this.getFullOrder(orderHash);
     // if (!existingOrder) {
     //   this.log(
@@ -114,7 +97,6 @@ export class ConduitRelay implements Relay {
     //   );
     //   return;
     // }
-
     // this.log('info', `Updating order ${orderHash} in orderbook - got a fill event`);
     // const takerTokenAmountRemaining = await this.getRemainingTakerAmount(
     //   orderHash,
@@ -124,7 +106,6 @@ export class ConduitRelay implements Relay {
     //   'debug',
     //   `Order ${orderHash} has ${takerTokenAmountRemaining.toString()} remaining to fill`
     // );
-
     // this.updateRemainingTakerTokenAmountForOrderInDatabase(orderHash, filledTakerTokenAmount);
     // this.log(
     //   'info',
@@ -136,12 +117,10 @@ export class ConduitRelay implements Relay {
     //   ...existingOrder,
     //   takerTokenAmountRemaining,
     // };
-
     // const { baseToken, quoteToken } = await this.getBaseTokenAndQuoteTokenFromMakerAndTaker(
     //   updatedOrder.takerTokenAddress,
     //   updatedOrder.makerTokenAddress
     // );
-
     // try {
     //   const channel = 'orderbook';
     //   const type = 'fill';

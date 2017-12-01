@@ -1,4 +1,4 @@
-import { OrderbookFill } from "./modules/ws-api/types";
+import { OrderbookFill } from './modules/ws-api/types';
 
 // export default class MessageTypes {
 //   public static GQL_CONNECTION_INIT = 'connection_init'; // Client -> Server
@@ -20,10 +20,7 @@ import { OrderbookFill } from "./modules/ws-api/types";
 //   }
 // }
 
-const createOrderbookFillMessage = (fill: OrderbookFill) => {
-  
-}
-
+const createOrderbookFillMessage = (fill: OrderbookFill) => {};
 
 export enum ChannelMessageTypes {
   orderbook = 'orderbook',
