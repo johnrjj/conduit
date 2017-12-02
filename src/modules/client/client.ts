@@ -16,7 +16,7 @@ import { Logger } from '../../util/logger';
 export class ConduitRelay implements Relay {
   private zeroEx: ZeroEx;
   private repository: Repository;
-  private publisher?: Publisher;
+  private publisher: Publisher;
   private logger?: Logger;
 
   constructor({ zeroEx, repository, publisher, logger }: RelayConfiguration) {
@@ -46,15 +46,6 @@ export class ConduitRelay implements Relay {
     return this.repository.getOrderbookForTokenPair(baseTokenAddress, quoteTokenAddress);
   }
 
-  async getFees(feePayload: FeeQueryRequest): Promise<FeeQueryResponse> {
-    const freeFee: FeeQueryResponse = {
-      feeRecipient: '0x0000000000000000000000000000000000000000',
-      makerFee: '0',
-      takerFee: '0',
-    };
-    return freeFee;
-  }
-
   async postOrder(orderHash: string, signedOrder: SignedOrder): Promise<SignedOrder> {
     const takerTokenRemainingAmount = await this.getRemainingTakerAmount(
       orderHash,
@@ -64,11 +55,23 @@ export class ConduitRelay implements Relay {
   }
 
   async addTokenPair(baseTokenAddress, quoteTokenAddress) {
-    return this.repository.addTokenPair(baseTokenAddress, quoteTokenAddress);
+    await this.repository.addTokenPair(baseTokenAddress, quoteTokenAddress);
+    // const eventType = '';
+    // const tokenAddedMessage = createTokenAddedMessage(baseTokenAddress, quoteTokenAddress);
+    // await this.publisher.publish(eventType, tokenAddedMessage);
   }
 
   async addToken(token: Token) {
     return this.repository.addToken(token);
+  }
+
+  async getFees(feePayload: FeeQueryRequest): Promise<FeeQueryResponse> {
+    const freeFee: FeeQueryResponse = {
+      feeRecipient: '0x0000000000000000000000000000000000000000',
+      makerFee: '0',
+      takerFee: '0',
+    };
+    return freeFee;
   }
 
   async getBaseTokenAndQuoteTokenFromMakerAndTaker(

@@ -1,7 +1,7 @@
 import { BigNumber } from 'bignumber.js';
 import { SignedOrder, Token } from '0x.js';
 import { OrderRelevantState } from '../client/types';
-import { OrderFilterOptions } from '../..//types';
+import { OrderFilterOptions } from '../../types';
 
 export interface Repository {
   getTokenPairs();

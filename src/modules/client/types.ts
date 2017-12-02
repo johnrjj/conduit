@@ -27,8 +27,8 @@ export interface OrderRelevantState {
 export interface RelayConfiguration {
   repository: Repository;
   zeroEx: ZeroEx;
+  publisher: Publisher;
   logger?: Logger;
-  publisher?: Publisher;
 }
 
 export interface Relay {
