@@ -7,7 +7,7 @@ export const TOKEN_PAIR_ADDED = 'TOKEN_PAIR_ADDED';
 export const ORDER_UPDATED = 'ORDER_UPDATED';
 export const ORDER_ADDED = 'ORDER_ADDED';
 
-export interface OrderMessage<T extends OrderAdded | OrderUpdated | TokenAdded | TokenPairAdded> {
+export interface OrderEvent<T extends OrderAdded | OrderUpdated | TokenAdded | TokenPairAdded> {
   type: string;
   payload: T;
 }
@@ -30,7 +30,7 @@ export interface TokenPairAdded {
 }
 
 // Event creator
-export const orderAdded = (order: SignedOrder): OrderMessage<OrderAdded> => {
+export const orderAdded = (order: SignedOrder): OrderEvent<OrderAdded> => {
   return {
     type: ORDER_ADDED,
     payload: {
@@ -39,7 +39,7 @@ export const orderAdded = (order: SignedOrder): OrderMessage<OrderAdded> => {
   };
 };
 
-export const orderUpdated = (order: SignedOrder): OrderMessage<OrderUpdated> => {
+export const orderUpdated = (order: SignedOrder): OrderEvent<OrderUpdated> => {
   return {
     type: ORDER_UPDATED,
     payload: {
@@ -48,7 +48,7 @@ export const orderUpdated = (order: SignedOrder): OrderMessage<OrderUpdated> => 
   };
 };
 
-export const tokenAdded = (token: Token): OrderMessage<TokenAdded> => {
+export const tokenAdded = (token: Token): OrderEvent<TokenAdded> => {
   return {
     type: TOKEN_ADDED,
     payload: {
@@ -60,7 +60,7 @@ export const tokenAdded = (token: Token): OrderMessage<TokenAdded> => {
 export const tokenPairAdded = (
   baseTokenAddress: string,
   quoteTokenAddress: string
-): OrderMessage<TokenPairAdded> => {
+): OrderEvent<TokenPairAdded> => {
   return {
     type: TOKEN_PAIR_ADDED,
     payload: {

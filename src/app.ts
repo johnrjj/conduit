@@ -17,7 +17,7 @@ import { RedisPublisher } from './modules/publisher';
 import { RedisSubscriber } from './modules/subscriber/index';
 import v0ApiRouteFactory from './modules/rest-api';
 import { WebSocketNode } from './modules/ws-api';
-// import { OrderWatcher } from './modules/order-watcher';
+import { OrderWatcher } from './modules/order-watcher';
 import { RoutingError } from './types';
 import { ConsoleLoggerFactory, Logger } from './util/logger';
 import config from './config';
@@ -50,11 +50,10 @@ const createApp = async () => {
 
   // Set up Redis
   const redisPublisher = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
-  const publisher = new RedisPublisher({ redisPublisher });
+  const publisher = new RedisPublisher({ redisPublisher, logger });
   logger.log('verbose', 'Redis Publisher setup');
-
   const redisSubscriber = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
-  const subscriber = new RedisSubscriber({ redisSubscriber });
+  const subscriber = new RedisSubscriber({ redisSubscriber, logger });
   logger.log('verbose', 'Redis Subscriber setup');
   logger.log('debug', 'Connected to Redis instance');
 
@@ -86,16 +85,16 @@ const createApp = async () => {
     logger.log('error', 'Error connecting to Postgres', e);
     throw e;
   }
-  const conduit = new ConduitRelay({ zeroEx, repository, logger, publisher });
+  const relay = new ConduitRelay({ zeroEx, repository, logger, publisher });
   logger.log('debug', `Connected to Relay client`);
 
   // OrderWatcher doesn't work right now...
   // Set up order watcher
-  // const orderWatcher = new OrderWatcher(zeroEx, relayClient, redisPublisher, redisSubscriber, logger);
-  // logger.log('debug', `Connected to OrderWatcher`);
-  // const orders = await relayClient.getOrders({ isOpen: true });
-  // await orderWatcher.watchOrderBatch(orders);
-  // logger.log('debug', `Subscribed to updates for all ${orders.length} open orders`);
+  const orderWatcher = new OrderWatcher({ zeroEx, relay: relay, subscriber, publisher, logger });
+  logger.log('debug', `Connected to OrderWatcher`);
+  const orders = await relay.getOrders({ isOpen: true });
+  await orderWatcher.watchOrderBatch(orders);
+  logger.log('debug', `Subscribed to updates for all ${orders.length} open orders`);
 
   // Set up express application (REST/WS endpoints)
   const app = express();
@@ -108,7 +107,7 @@ const createApp = async () => {
 
   app.get('/healthcheck', (req, res) => res.sendStatus(200));
   app.get('/', (req, res) => res.send('Welcome to the Conduit Relay API'));
-  app.use('/api/v0', v0ApiRouteFactory(conduit, zeroEx, logger));
+  app.use('/api/v0', v0ApiRouteFactory(relay, zeroEx, logger));
   logger.log('verbose', 'Configured REST endpoints');
 
   const wss = expressWs.getWss('/ws');
@@ -117,7 +116,7 @@ const createApp = async () => {
     wss,
     publisher,
     subscriber,
-    relay: conduit,
+    relay: relay,
   });
   (app as any).ws('/ws', (ws, req, next) => webSocketNode.connectionHandler(ws, req, next));
   logger.log('verbose', 'Configured WebSocket endpoints');
