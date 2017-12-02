@@ -32,6 +32,7 @@ export interface RelayConfiguration {
 }
 
 export interface Relay {
+  getTokens(): Promise<Array<Token>>;
   getTokenPairs(o?: PaginationOptions): Promise<Array<TokenPair>>;
   getOrders(options?: OrderFilterOptions): Promise<Array<SignedOrder>>;
   getOrder(orderHash: string): Promise<SignedOrder | null>;

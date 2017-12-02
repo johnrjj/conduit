@@ -2,34 +2,35 @@ import { Token, SignedOrder } from '0x.js';
 import { TokenPair } from '../types';
 
 // Event types
-const TOKEN_ADDED = 'TOKEN_ADDED';
-const TOKEN_PAIR_ADDED = 'TOKEN_PAIR_ADDED';
-const ORDER_UPDATED = 'ORDER_UPDATED';
-const ORDER_ADDED = 'ORDER_ADDED';
+export const TOKEN_ADDED = 'TOKEN_ADDED';
+export const TOKEN_PAIR_ADDED = 'TOKEN_PAIR_ADDED';
+export const ORDER_UPDATED = 'ORDER_UPDATED';
+export const ORDER_ADDED = 'ORDER_ADDED';
 
-interface OrderMessage<T extends OrderAdded | OrderUpdated | TokenAdded | TokenPairAdded> {
+export interface OrderMessage<T extends OrderAdded | OrderUpdated | TokenAdded | TokenPairAdded> {
   type: string;
   payload: T;
 }
 
-interface OrderAdded {
+export interface OrderAdded {
   order: SignedOrder;
 }
 
-interface OrderUpdated {
+export interface OrderUpdated {
   order: SignedOrder;
 }
 
-interface TokenAdded {
+export interface TokenAdded {
   token: Token;
 }
 
-interface TokenPairAdded {
-  tokenPair: TokenPair;
+export interface TokenPairAdded {
+  baseTokenAddress: string;
+  quoteTokenAddress: string;
 }
 
 // Event creator
-const orderAdded = (order: SignedOrder): OrderMessage<OrderAdded> => {
+export const orderAdded = (order: SignedOrder): OrderMessage<OrderAdded> => {
   return {
     type: ORDER_ADDED,
     payload: {
@@ -38,7 +39,7 @@ const orderAdded = (order: SignedOrder): OrderMessage<OrderAdded> => {
   };
 };
 
-const orderUpdated = (order: SignedOrder): OrderMessage<OrderUpdated> => {
+export const orderUpdated = (order: SignedOrder): OrderMessage<OrderUpdated> => {
   return {
     type: ORDER_UPDATED,
     payload: {
@@ -47,7 +48,7 @@ const orderUpdated = (order: SignedOrder): OrderMessage<OrderUpdated> => {
   };
 };
 
-const tokenAdded = (token: Token): OrderMessage<TokenAdded> => {
+export const tokenAdded = (token: Token): OrderMessage<TokenAdded> => {
   return {
     type: TOKEN_ADDED,
     payload: {
@@ -56,11 +57,15 @@ const tokenAdded = (token: Token): OrderMessage<TokenAdded> => {
   };
 };
 
-const tokenPairAdded = (tokenPair: TokenPair): OrderMessage<TokenPairAdded> => {
+export const tokenPairAdded = (
+  baseTokenAddress: string,
+  quoteTokenAddress: string
+): OrderMessage<TokenPairAdded> => {
   return {
     type: TOKEN_PAIR_ADDED,
     payload: {
-      tokenPair,
+      baseTokenAddress,
+      quoteTokenAddress,
     },
   };
 };

@@ -27,7 +27,6 @@ export class OrderWatcher {
     this.publisher = publisher;
     this.subscriber = subscriber;
     this.logger = logger;
-
     this.setupOrderWatcher();
   }
 
@@ -92,7 +91,7 @@ export class OrderWatcher {
     }
   };
 
-  private log(level: string, message: string, meta?: any) {
+  private log(level: string, message: string, meta?: any): void {
     if (!this.logger) {
       return;
     }

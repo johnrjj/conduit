@@ -153,10 +153,16 @@ const createRouter = (client: Relay, zeroEx: ZeroEx, logger: Logger) => {
     }
   });
 
+  // todo rename tokens
+  router.get('/tokens', async (req, res) => {
+    const tokens = await client.getTokens();
+    res.status(201).json(tokens);
+  });
+
   /**
    * @deprecated
    */
-  router.get('/tokens', async (req, res) => {
+  router.get('/token-registry', async (req, res) => {
     const tokens = await zeroEx.tokenRegistry.getTokensAsync();
     res.status(201).json(tokens);
   });

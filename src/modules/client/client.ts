@@ -4,6 +4,16 @@ import { Publisher } from '../publisher';
 import { Repository } from '../repository';
 import { Relay, RelayConfiguration, OrderRelevantState } from './types';
 import {
+  TOKEN_ADDED,
+  TOKEN_PAIR_ADDED,
+  ORDER_ADDED,
+  ORDER_UPDATED,
+  tokenAdded,
+  tokenPairAdded,
+  orderAdded,
+  orderUpdated,
+} from '../events';
+import {
   OrderbookPair,
   ZeroExOrderFillEvent,
   TokenPair,
@@ -38,12 +48,12 @@ export class ConduitRelay implements Relay {
     return this.repository.getOrder(orderHash);
   }
 
-  async updateOrder(orderHash: string, orderState: OrderRelevantState): Promise<SignedOrder> {
-    return this.repository.updateOrder(orderHash, orderState);
-  }
-
   async getOrderbook(baseTokenAddress, quoteTokenAddress): Promise<OrderbookPair> {
     return this.repository.getOrderbookForTokenPair(baseTokenAddress, quoteTokenAddress);
+  }
+
+  async getTokens(): Promise<Array<Token>> {
+    return await this.zeroEx.tokenRegistry.getTokensAsync();
   }
 
   async postOrder(orderHash: string, signedOrder: SignedOrder): Promise<SignedOrder> {
@@ -51,18 +61,33 @@ export class ConduitRelay implements Relay {
       orderHash,
       signedOrder.takerTokenAmount
     );
-    return this.repository.addOrder(orderHash, takerTokenRemainingAmount, signedOrder);
+    const addedOrder = await this.repository.addOrder(
+      orderHash,
+      takerTokenRemainingAmount,
+      signedOrder
+    );
+    const orderAddedEvent = orderAdded(addedOrder);
+    await this.publisher.publish(ORDER_ADDED, orderAddedEvent);
+    return addedOrder;
+  }
+
+  async updateOrder(orderHash: string, orderState: OrderRelevantState): Promise<SignedOrder> {
+    const updatedOrder = await this.repository.updateOrder(orderHash, orderState);
+    const orderUpdatedEvent = orderUpdated(updatedOrder);
+    await this.publisher.publish(ORDER_UPDATED, orderUpdatedEvent);
+    return updatedOrder;
   }
 
   async addTokenPair(baseTokenAddress, quoteTokenAddress) {
     await this.repository.addTokenPair(baseTokenAddress, quoteTokenAddress);
-    // const eventType = '';
-    // const tokenAddedMessage = createTokenAddedMessage(baseTokenAddress, quoteTokenAddress);
-    // await this.publisher.publish(eventType, tokenAddedMessage);
+    const tokenPairAddedEvent = tokenPairAdded(baseTokenAddress, quoteTokenAddress);
+    await this.publisher.publish(TOKEN_PAIR_ADDED, tokenPairAddedEvent);
   }
 
   async addToken(token: Token) {
-    return this.repository.addToken(token);
+    await this.repository.addToken(token);
+    const tokenAddedEvent = tokenAdded(token);
+    await this.publisher.publish(TOKEN_ADDED, tokenAddedEvent);
   }
 
   async getFees(feePayload: FeeQueryRequest): Promise<FeeQueryResponse> {
