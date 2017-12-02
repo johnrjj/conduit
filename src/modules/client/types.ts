@@ -27,11 +27,12 @@ export interface OrderRelevantState {
 export interface RelayConfiguration {
   repository: Repository;
   zeroEx: ZeroEx;
+  publisher: Publisher;
   logger?: Logger;
-  publisher?: Publisher;
 }
 
 export interface Relay {
+  getTokens(): Promise<Array<Token>>;
   getTokenPairs(o?: PaginationOptions): Promise<Array<TokenPair>>;
   getOrders(options?: OrderFilterOptions): Promise<Array<SignedOrder>>;
   getOrder(orderHash: string): Promise<SignedOrder | null>;

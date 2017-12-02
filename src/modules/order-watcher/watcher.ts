@@ -3,17 +3,30 @@ import { RedisClient } from 'redis';
 import { Relay } from '../client/types';
 import { Logger } from '../../util/logger';
 import { serializeSignedOrder } from '../../util/order';
+import { Publisher } from '../publisher';
+import { Subscriber } from '../subscriber';
+
+export interface OrderWatcherConfig {
+  zeroEx: ZeroEx;
+  relay: Relay;
+  publisher: Publisher;
+  subscriber: Subscriber;
+  logger: Logger;
+}
 
 export class OrderWatcher {
+  private zeroEx: ZeroEx;
+  private relay: Relay;
+  private publisher: Publisher;
+  private subscriber: Subscriber;
+  private logger: Logger;
   private watchedOrders: Set<OrderHash> = new Set();
-
-  constructor(
-    private zeroEx: ZeroEx,
-    private relay: Relay,
-    private redisPublisher: RedisClient,
-    private redisSubscriber: RedisClient,
-    private logger: Logger
-  ) {
+  constructor({ zeroEx, relay, publisher, subscriber, logger }: OrderWatcherConfig) {
+    this.zeroEx = zeroEx;
+    this.relay = relay;
+    this.publisher = publisher;
+    this.subscriber = subscriber;
+    this.logger = logger;
     this.setupOrderWatcher();
   }
 
@@ -60,8 +73,8 @@ export class OrderWatcher {
       );
       const serializedUpdatedSignedOrder = serializeSignedOrder(updatedSignedOrder);
       const messageChannel = `orderbook:fill:${baseToken}:${quoteToken}`;
-      const messageContents = JSON.stringify(serializedUpdatedSignedOrder);
-      this.redisPublisher.publish(messageChannel, messageContents);
+      const messageContents = serializedUpdatedSignedOrder;
+      this.publisher.publish(messageChannel, messageContents);
       this.log(
         'verbose',
         `Order ${orderHash} update complete, emiting event ${messageChannel}`,
@@ -78,7 +91,7 @@ export class OrderWatcher {
     }
   };
 
-  private log(level: string, message: string, meta?: any) {
+  private log(level: string, message: string, meta?: any): void {
     if (!this.logger) {
       return;
     }

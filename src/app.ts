@@ -50,10 +50,12 @@ const createApp = async () => {
 
   // Set up Redis
   const redisPublisher = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
-  const redisSubscriber = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
-
   const publisher = new RedisPublisher({ redisPublisher });
+  logger.log('verbose', 'Redis Publisher setup');
+
+  const redisSubscriber = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
   const subscriber = new RedisSubscriber({ redisSubscriber });
+  logger.log('verbose', 'Redis Subscriber setup');
   logger.log('debug', 'Connected to Redis instance');
 
   // Set up Relay Client (Postgres flavor)

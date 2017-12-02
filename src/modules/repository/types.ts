@@ -1,7 +1,7 @@
 import { BigNumber } from 'bignumber.js';
 import { SignedOrder, Token } from '0x.js';
 import { OrderRelevantState } from '../client/types';
-import { OrderFilterOptions } from '../..//types';
+import { OrderFilterOptions } from '../../types';
 
 export interface Repository {
   getTokenPairs();
@@ -9,8 +9,12 @@ export interface Repository {
   getOrder(orderHash: string);
   updateOrder(orderHash: string, orderState: OrderRelevantState);
   getOrderbookForTokenPair(baseTokenAddress: string, quoteTokenAddress: string);
-  addOrder(orderHash: string, takerTokenRemainingAmount: BigNumber, signedOrder: SignedOrder);
-  addToken(token: Token);
+  addOrder(
+    orderHash: string,
+    takerTokenRemainingAmount: BigNumber,
+    signedOrder: SignedOrder
+  ): Promise<SignedOrder>;
+  addToken(token: Token): Promise<Token>;
   addTokenPair(baseTokenAddress, quoteTokenAddress);
   getBaseTokenAndQuoteTokenFromMakerAndTaker(takerTokenAddress: string, makerTokenAddress: string);
 }

@@ -4,6 +4,16 @@ import { Publisher } from '../publisher';
 import { Repository } from '../repository';
 import { Relay, RelayConfiguration, OrderRelevantState } from './types';
 import {
+  TOKEN_ADDED,
+  TOKEN_PAIR_ADDED,
+  ORDER_ADDED,
+  ORDER_UPDATED,
+  tokenAdded,
+  tokenPairAdded,
+  orderAdded,
+  orderUpdated,
+} from '../events';
+import {
   OrderbookPair,
   ZeroExOrderFillEvent,
   TokenPair,
@@ -16,7 +26,7 @@ import { Logger } from '../../util/logger';
 export class ConduitRelay implements Relay {
   private zeroEx: ZeroEx;
   private repository: Repository;
-  private publisher?: Publisher;
+  private publisher: Publisher;
   private logger?: Logger;
 
   constructor({ zeroEx, repository, publisher, logger }: RelayConfiguration) {
@@ -38,12 +48,46 @@ export class ConduitRelay implements Relay {
     return this.repository.getOrder(orderHash);
   }
 
-  async updateOrder(orderHash: string, orderState: OrderRelevantState): Promise<SignedOrder> {
-    return this.repository.updateOrder(orderHash, orderState);
-  }
-
   async getOrderbook(baseTokenAddress, quoteTokenAddress): Promise<OrderbookPair> {
     return this.repository.getOrderbookForTokenPair(baseTokenAddress, quoteTokenAddress);
+  }
+
+  async getTokens(): Promise<Array<Token>> {
+    return await this.zeroEx.tokenRegistry.getTokensAsync();
+  }
+
+  async postOrder(orderHash: string, signedOrder: SignedOrder): Promise<SignedOrder> {
+    const takerTokenRemainingAmount = await this.getRemainingTakerAmount(
+      orderHash,
+      signedOrder.takerTokenAmount
+    );
+    const addedOrder = await this.repository.addOrder(
+      orderHash,
+      takerTokenRemainingAmount,
+      signedOrder
+    );
+    const orderAddedEvent = orderAdded(addedOrder);
+    await this.publisher.publish(ORDER_ADDED, orderAddedEvent);
+    return addedOrder;
+  }
+
+  async updateOrder(orderHash: string, orderState: OrderRelevantState): Promise<SignedOrder> {
+    const updatedOrder = await this.repository.updateOrder(orderHash, orderState);
+    const orderUpdatedEvent = orderUpdated(updatedOrder);
+    await this.publisher.publish(ORDER_UPDATED, orderUpdatedEvent);
+    return updatedOrder;
+  }
+
+  async addTokenPair(baseTokenAddress, quoteTokenAddress) {
+    await this.repository.addTokenPair(baseTokenAddress, quoteTokenAddress);
+    const tokenPairAddedEvent = tokenPairAdded(baseTokenAddress, quoteTokenAddress);
+    await this.publisher.publish(TOKEN_PAIR_ADDED, tokenPairAddedEvent);
+  }
+
+  async addToken(token: Token) {
+    await this.repository.addToken(token);
+    const tokenAddedEvent = tokenAdded(token);
+    await this.publisher.publish(TOKEN_ADDED, tokenAddedEvent);
   }
 
   async getFees(feePayload: FeeQueryRequest): Promise<FeeQueryResponse> {
@@ -53,22 +97,6 @@ export class ConduitRelay implements Relay {
       takerFee: '0',
     };
     return freeFee;
-  }
-
-  async postOrder(orderHash: string, signedOrder: SignedOrder): Promise<SignedOrder> {
-    const takerTokenRemainingAmount = await this.getRemainingTakerAmount(
-      orderHash,
-      signedOrder.takerTokenAmount
-    );
-    return this.repository.addOrder(orderHash, takerTokenRemainingAmount, signedOrder);
-  }
-
-  async addTokenPair(baseTokenAddress, quoteTokenAddress) {
-    return this.repository.addTokenPair(baseTokenAddress, quoteTokenAddress);
-  }
-
-  async addToken(token: Token) {
-    return this.repository.addToken(token);
   }
 
   async getBaseTokenAndQuoteTokenFromMakerAndTaker(

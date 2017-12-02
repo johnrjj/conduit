@@ -31,6 +31,7 @@ export interface PostgresRepositoryOptions {
   redisPublisher: RedisClient;
 }
 
+// TODO: TWO PHASE COMMITS w/ ROLLBACK STEP
 export class PostgresRepository implements Repository {
   private pool: Pool;
   private orderTableName: string;
@@ -243,6 +244,7 @@ export class PostgresRepository implements Repository {
       token.decimals
     }, ${token.name})
     `);
+    return token;
   }
 
   async getBaseTokenAndQuoteTokenFromMakerAndTaker(
