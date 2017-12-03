@@ -56,7 +56,28 @@ export class ConduitRelay implements Relay {
     return await this.zeroEx.tokenRegistry.getTokensAsync();
   }
 
-  async postOrder(orderHash: string, signedOrder: SignedOrder): Promise<SignedOrder> {
+  async postOrder(signedOrder: SignedOrder): Promise<SignedOrder> {
+    // todo: validation...
+    // try {
+    //   await zeroEx.exchange.validateOrderFillableOrThrowAsync(signedOrder);
+    //   logger.log('debug', `Order ${orderHash} is fillable`);
+    // } catch (err) {
+    //   logger.log('debug', `Order ${orderHash} is not fillable`);
+    // }
+    // const isValidSig = await ZeroEx.isValidSignature(
+    //   orderHash,
+    //   possibleOrder.ecSignature,
+    //   possibleOrder.maker
+    // );
+    // if (!isValidSig) {
+    //   logger.log('debug', `Invalid signature for order: ${orderHash}`);
+    //   const e = {
+    //     code: 1005,
+    //     message: 'Invalid signature',
+    //   };
+    // }
+
+    const orderHash = ZeroEx.getOrderHashHex(signedOrder);
     const takerTokenRemainingAmount = await this.getRemainingTakerAmount(
       orderHash,
       signedOrder.takerTokenAmount

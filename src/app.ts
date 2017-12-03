@@ -15,7 +15,7 @@ import { ConduitRelay } from './modules/client';
 import { PostgresRepository, Repository } from './modules/repository';
 import { RedisPublisher } from './modules/publisher';
 import { RedisSubscriber } from './modules/subscriber/index';
-import v0ApiRouteFactory from './modules/rest-api';
+import { v0ApiRouterFactory } from './modules/rest-api';
 import { WebSocketNode } from './modules/ws-api';
 import { OrderWatcher } from './modules/order-watcher';
 import { RoutingError } from './types';
@@ -74,10 +74,7 @@ const createApp = async () => {
       orderTableName: config.PG_ORDERS_TABLE_NAME || 'orders',
       tokenTableName: config.PG_TOKENS_TABLE_NAME || 'tokens',
       tokenPairTableName: config.PG_TOKEN_PAIRS_TABLE_NAME || 'token_pairs',
-      zeroEx,
       logger,
-      redisPublisher,
-      redisSubscriber,
     });
     await pool.connect();
     logger.log('debug', `Connected to Postgres database`);
@@ -85,12 +82,11 @@ const createApp = async () => {
     logger.log('error', 'Error connecting to Postgres', e);
     throw e;
   }
-  const relay = new ConduitRelay({ zeroEx, repository, logger, publisher });
+  const relay = new ConduitRelay({ zeroEx, repository, publisher, logger });
   logger.log('debug', `Connected to Relay client`);
 
-  // OrderWatcher doesn't work right now...
   // Set up order watcher
-  const orderWatcher = new OrderWatcher({ zeroEx, relay: relay, subscriber, publisher, logger });
+  const orderWatcher = new OrderWatcher({ zeroEx, relay, subscriber, publisher, logger });
   logger.log('debug', `Connected to OrderWatcher`);
   const orders = await relay.getOrders({ isOpen: true });
   await orderWatcher.watchOrderBatch(orders);
@@ -104,23 +100,24 @@ const createApp = async () => {
   app.use(expressLogger('dev'));
   app.use(helmet());
   app.use(cors());
-
-  app.get('/healthcheck', (req, res) => res.sendStatus(200));
-  app.get('/', (req, res) => res.send('Welcome to the Conduit Relay API'));
-  app.use('/api/v0', v0ApiRouteFactory(relay, zeroEx, logger));
+  // REST
+  app.get('/', (_, res) => res.send('Welcome to the Conduit Relay API'));
+  app.get('/healthcheck', (_, res) => res.sendStatus(200));
+  app.use('/api/v0', v0ApiRouterFactory(relay, logger));
   logger.log('verbose', 'Configured REST endpoints');
-
+  // WS
   const wss = expressWs.getWss('/ws');
   const webSocketNode = new WebSocketNode({
-    logger,
     wss,
+    relay,
     publisher,
     subscriber,
-    relay: relay,
+    logger,
   });
   (app as any).ws('/ws', (ws, req, next) => webSocketNode.connectionHandler(ws, req, next));
   logger.log('verbose', 'Configured WebSocket endpoints');
 
+  // 404 handler
   app.use((req: Request, res: Response, next: NextFunction) => {
     const err = new RoutingError('Not Found');
     err.status = 404;

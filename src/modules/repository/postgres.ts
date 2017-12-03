@@ -25,10 +25,7 @@ export interface PostgresRepositoryOptions {
   orderTableName: string;
   tokenTableName: string;
   tokenPairTableName: string;
-  zeroEx: ZeroEx;
   logger?: Logger;
-  redisSubscriber: RedisClient;
-  redisPublisher: RedisClient;
 }
 
 // TODO: TWO PHASE COMMITS w/ ROLLBACK STEP
