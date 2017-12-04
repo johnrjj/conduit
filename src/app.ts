@@ -32,13 +32,20 @@ const createApp = async () => {
   const BLOCKCHAIN_STARTING_BLOCK = config.BLOCKCHAIN_STARTING_BLOCK;
   const ZEROEX_EXCHANGE_SOL_ADDRESS = config.ZERO_EX_EXCHANGE_SOL_ADDRESS;
 
-  logger.log('info', 'Conduit starting...');
+  const log = (level: string, message: string, meta?: any) => {
+    if (!logger) {
+      return;
+    }
+    logger.log(level, `App: ${message}`, meta);
+  }
+
+  log('info', 'Conduit starting...');
   // Set up Web3
   const providerEngine = new ProviderEngine();
   providerEngine.addProvider(new FilterSubprovider());
   providerEngine.addProvider(new RpcSubprovider({ rpcUrl: BLOCKCHAIN_NETWORK_ENDPOINT }));
   providerEngine.start();
-  logger.log('verbose', 'Connected to Web3 Provider Engine');
+  log('verbose', 'Connected to Web3 Provider Engine');
 
   // Set up ZeroEx
   const zeroEx = new ZeroEx(providerEngine, {
@@ -46,16 +53,16 @@ const createApp = async () => {
     networkId: 42,
     orderWatcherConfig: { eventPollingIntervalMs: 1000 },
   });
-  logger.log('verbose', 'ZeroEx client set up');
+  log('verbose', 'ZeroEx client set up');
 
   // Set up Redis
   const redisPublisher = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
   const publisher = new RedisPublisher({ redisPublisher, logger });
-  logger.log('verbose', 'Redis Publisher setup');
+  log('verbose', 'Redis Publisher setup');
   const redisSubscriber = config.REDIS_URL ? createClient(config.REDIS_URL) : createClient();
   const subscriber = new RedisSubscriber({ redisSubscriber, logger });
-  logger.log('verbose', 'Redis Subscriber setup');
-  logger.log('debug', 'Connected to Redis instance');
+  log('verbose', 'Redis Subscriber setup');
+  log('debug', 'Connected to Redis instance');
 
   // Set up Relay Client (Postgres flavor)
   let repository: Repository;
@@ -77,20 +84,20 @@ const createApp = async () => {
       logger,
     });
     await pool.connect();
-    logger.log('debug', `Connected to Postgres database`);
+    log('debug', `Connected to Postgres database`);
   } catch (e) {
-    logger.log('error', 'Error connecting to Postgres', e);
+    log('error', 'Error connecting to Postgres', e);
     throw e;
   }
   const relay = new ConduitRelay({ zeroEx, repository, publisher, logger });
-  logger.log('debug', `Connected to Relay client`);
+  log('debug', `Connected to Relay client`);
 
   // Set up order watcher
   const orderWatcher = new OrderWatcher({ zeroEx, relay, subscriber, publisher, logger });
-  logger.log('debug', `Connected to OrderWatcher`);
+  log('debug', `Connected to OrderWatcher`);
   const orders = await relay.getOrders({ isOpen: true });
   await orderWatcher.watchOrderBatch(orders);
-  logger.log('debug', `Subscribed to updates for all ${orders.length} open orders`);
+  log('debug', `Subscribed to updates for all ${orders.length} open orders`);
 
   // Set up express application (REST/WS endpoints)
   const app = express();
@@ -104,7 +111,7 @@ const createApp = async () => {
   app.get('/', (_, res) => res.send('Welcome to the Conduit Relay API'));
   app.get('/healthcheck', (_, res) => res.sendStatus(200));
   app.use('/api/v0', v0ApiRouterFactory(relay, logger));
-  logger.log('verbose', 'Configured REST endpoints');
+  log('verbose', 'Configured REST endpoints');
   // WS
   const wss = expressWs.getWss('/ws');
   const webSocketNode = new WebSocketNode({
@@ -115,7 +122,7 @@ const createApp = async () => {
     logger,
   });
   (app as any).ws('/ws', (ws, req, next) => webSocketNode.connectionHandler(ws, req, next));
-  logger.log('verbose', 'Configured WebSocket endpoints');
+  log('verbose', 'Configured WebSocket endpoints');
 
   // 404 handler
   app.use((req: Request, res: Response, next: NextFunction) => {

@@ -98,6 +98,6 @@ export class RedisSubscriber implements Subscriber {
     if (!this.logger) {
       return;
     }
-    this.logger.log(level, message, meta);
+    this.logger.log(level, `Redis Subscriber: ${message}`, meta);
   }
 }

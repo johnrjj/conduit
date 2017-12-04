@@ -88,7 +88,7 @@ export class OrderWatcher {
     if (!this.logger) {
       return;
     }
-    this.logger.log(level, message, meta);
+    this.logger.log(level, `Order Watcher: ${message}`, meta);
   }
 }
 

@@ -8,6 +8,13 @@ import { validateEndpointSignedOrderBySchema } from '../../util/validate';
 import { Logger } from '../../util/logger';
 
 const v0ApiRouterFactory = (client: Relay, logger: Logger) => {
+  const log = (level: string, message: string, meta?: any) => {
+    if (!logger) {
+      return;
+    }
+    logger.log(level, `REST API: ${message}`, meta);
+  }
+
   const router = Router();
   router.use(bodyParser.json({ type: '*/*' }));
   router.use(bodyParser.urlencoded({ extended: true }));
@@ -29,14 +36,14 @@ const v0ApiRouterFactory = (client: Relay, logger: Logger) => {
       return next({ errorMessage: 'quoteTokenAddress missing' });
     }
     try {
-      logger.log(
+      log(
         'verbose',
         `Querying orderbook for ${baseTokenAddress} and ${quoteTokenAddress} pair`
       );
       const orderbookForTokenPair = await client.getOrderbook(baseTokenAddress, quoteTokenAddress);
       return res.status(201).json(orderbookForTokenPair);
     } catch (err) {
-      logger.log('error', 'Error querying for orderbook.', err);
+      log('error', 'Error querying for orderbook.', err);
       res.sendStatus(500);
     }
   });
@@ -69,19 +76,19 @@ const v0ApiRouterFactory = (client: Relay, logger: Logger) => {
   });
 
   router.post('/order', async (req, res, next) => {
-    logger.log('debug', 'Order endpoint hit, verifying order...');
+    log('debug', 'Order endpoint hit, verifying order...');
     const { body } = req;
     const possibleOrder = body as OrderPayload;
 
     if (possibleOrder.taker === '') {
       // schema requires a taker, so if null/emptystring we assign empty hex
-      logger.log('debug', 'Order taker adress empty, assigning empty hex address');
+      log('debug', 'Order taker adress empty, assigning empty hex address');
       const EMPTY_TAKER_ADDRESS = '0x0000000000000000000000000000000000000000';
       possibleOrder.taker = EMPTY_TAKER_ADDRESS;
     }
     const validationInfo = validateEndpointSignedOrderBySchema(possibleOrder);
     if (!validationInfo.valid) {
-      logger.log('debug', 'Order validation failed');
+      log('debug', 'Order validation failed');
       const e = {
         code: 101,
         status: 400,
@@ -103,7 +110,7 @@ const v0ApiRouterFactory = (client: Relay, logger: Logger) => {
    * @deprecated experimental for testing only, no validation included.
    */
   router.post('/zeroex-portal-order', async (req, res, next) => {
-    logger.log('debug', 'ZeroEx Portal Order Converter hit, adding order');
+    log('debug', 'ZeroEx Portal Order Converter hit, adding order');
     const { body } = req;
     const payload = body as ZeroExPortalOrderJSON;
     const signedOrder = mapZeroExPortalOrderJSONToSignedOrder(payload);

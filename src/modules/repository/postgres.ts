@@ -325,7 +325,7 @@ export class PostgresRepository implements Repository {
     if (!this.logger) {
       return;
     }
-    this.logger.log(level, message, meta);
+    this.logger.log(level, `PostgresRepository: ${message}`, meta);
   }
 }
 

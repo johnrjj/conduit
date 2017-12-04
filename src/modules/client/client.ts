@@ -162,6 +162,6 @@ export class ConduitRelay implements Relay {
     if (!this.logger) {
       return;
     }
-    this.logger.log(level, message, meta);
+    this.logger.log(level, `Relay Client: ${message}`, meta);
   }
 }

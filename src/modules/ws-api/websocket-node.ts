@@ -96,7 +96,7 @@ export class WebSocketNode {
           type: 'update',
           channel: 'orderbook',
           channelId,
-          payload: serializeSignedOrder(orderAddEvent.payload.order),
+          payload: serializeSignedOrder(orderAddEvent.payload.order as any),
         };
         this.sendMessage(connection, message);
       }
@@ -131,7 +131,6 @@ export class WebSocketNode {
       }
       switch (data.type) {
         case 'subscribe':
-          this.log('debug', `WebSocket subscribe request received`);
           const subscribeRequest = data as WebSocketMessage<SubscribeRequest>;
           this.handleSubscriptionRequest(connectionContext, subscribeRequest);
           break;
@@ -160,6 +159,7 @@ export class WebSocketNode {
     const { baseTokenAddress, quoteTokenAddress, limit, snapshot: snapshotRequested } = payload;
     const subscriptionChannel = `${baseTokenAddress}-${quoteTokenAddress}`;
     const channelId = context.subscriptionCount++;
+    this.log('debug', `WebSocket subscribe request received for channel ${subscriptionChannel} (Client channel id: ${channelId})`);
     context.subscriptionIdMap.set(subscriptionChannel, channelId);
     context.subscriptions.push(subscriptionChannel);
 
@@ -193,6 +193,6 @@ export class WebSocketNode {
     if (!this.logger) {
       return;
     }
-    this.logger.log(level, message, meta);
+    this.logger.log(level, `WebSocket Node: ${message}`, meta);
   }
 }

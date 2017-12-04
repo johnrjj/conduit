@@ -29,6 +29,6 @@ export class RedisPublisher implements Publisher {
     if (!this.logger) {
       return;
     }
-    this.logger.log(level, message, meta);
+    this.logger.log(level, `Redis Publisher: ${message}`, meta);
   }
 }
