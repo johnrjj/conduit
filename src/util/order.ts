@@ -1,5 +1,6 @@
 import { SignedOrder } from '0x.js';
-import { SerializedSignedOrder } from '../types';
+import { SerializedSignedOrder, SerializedOrder } from '../types';
+import { BigNumber } from 'bignumber.js';
 
 const serializeSignedOrder = (signedOrder: SignedOrder): SerializedSignedOrder => {
   const serializedSignedOrder = {
@@ -20,4 +21,27 @@ const serializeSignedOrder = (signedOrder: SignedOrder): SerializedSignedOrder =
   return serializedSignedOrder;
 };
 
-export { serializeSignedOrder };
+const deserializeSignedOrder = (serializedSignedOrder: SerializedSignedOrder): SignedOrder => {
+  const order: SignedOrder = {
+    exchangeContractAddress: serializedSignedOrder.exchangeContractAddress,
+    maker: serializedSignedOrder.maker,
+    taker: serializedSignedOrder.taker,
+    makerTokenAddress: serializedSignedOrder.makerTokenAddress,
+    takerTokenAddress: serializedSignedOrder.takerTokenAddress,
+    feeRecipient: serializedSignedOrder.feeRecipient,
+    makerTokenAmount: new BigNumber(serializedSignedOrder.makerTokenAmount),
+    takerTokenAmount: new BigNumber(serializedSignedOrder.takerTokenAmount),
+    makerFee: new BigNumber(serializedSignedOrder.makerFee),
+    takerFee: new BigNumber(serializedSignedOrder.takerFee),
+    expirationUnixTimestampSec: new BigNumber(serializedSignedOrder.expirationUnixTimestampSec),
+    salt: new BigNumber(serializedSignedOrder.salt),
+    ecSignature: {
+      v: serializedSignedOrder.ecSignature.v,
+      r: serializedSignedOrder.ecSignature.r,
+      s: serializedSignedOrder.ecSignature.s,
+    },
+  };
+  return order;
+};
+
+export { serializeSignedOrder, deserializeSignedOrder };

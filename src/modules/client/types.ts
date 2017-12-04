@@ -14,14 +14,14 @@ import { Publisher } from '../publisher/publisher';
 
 // not currently exported by 0x;
 export interface OrderRelevantState {
-  makerBalance: BigNumber;
-  makerProxyAllowance: BigNumber;
-  makerFeeBalance: BigNumber;
-  makerFeeProxyAllowance: BigNumber;
-  filledTakerTokenAmount: BigNumber;
-  cancelledTakerTokenAmount: BigNumber;
   remainingFillableMakerTokenAmount: BigNumber;
   remainingFillableTakerTokenAmount: BigNumber;
+  makerBalance?: BigNumber;
+  makerProxyAllowance?: BigNumber;
+  makerFeeBalance?: BigNumber;
+  makerFeeProxyAllowance?: BigNumber;
+  filledTakerTokenAmount?: BigNumber;
+  cancelledTakerTokenAmount?: BigNumber;
 }
 
 export interface RelayConfiguration {

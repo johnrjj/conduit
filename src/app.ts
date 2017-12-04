@@ -14,7 +14,7 @@ import { ZeroEx } from '0x.js';
 import { ConduitRelay } from './modules/client';
 import { PostgresRepository, Repository } from './modules/repository';
 import { RedisPublisher } from './modules/publisher';
-import { RedisSubscriber } from './modules/subscriber/index';
+import { RedisSubscriber } from './modules/subscriber';
 import { v0ApiRouterFactory } from './modules/rest-api';
 import { WebSocketNode } from './modules/ws-api';
 import { OrderWatcher } from './modules/order-watcher';

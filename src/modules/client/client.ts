@@ -87,14 +87,29 @@ export class ConduitRelay implements Relay {
       takerTokenRemainingAmount,
       signedOrder
     );
-    const orderAddedEvent = orderAdded(addedOrder);
+    const {
+      baseToken,
+      quoteToken,
+    } = await this.repository.getBaseTokenAndQuoteTokenFromMakerAndTaker(
+      addedOrder.takerTokenAddress,
+      addedOrder.makerTokenAddress
+    );
+    const orderAddedEvent = orderAdded(addedOrder, baseToken, quoteToken);
     await this.publisher.publish(ORDER_ADDED, orderAddedEvent);
     return addedOrder;
   }
 
   async updateOrder(orderHash: string, orderState: OrderRelevantState): Promise<SignedOrder> {
     const updatedOrder = await this.repository.updateOrder(orderHash, orderState);
-    const orderUpdatedEvent = orderUpdated(updatedOrder);
+
+    const {
+      baseToken,
+      quoteToken,
+    } = await this.repository.getBaseTokenAndQuoteTokenFromMakerAndTaker(
+      updatedOrder.takerTokenAddress,
+      updatedOrder.makerTokenAddress
+    );
+    const orderUpdatedEvent = orderUpdated(updatedOrder, orderState, baseToken, quoteToken);
     await this.publisher.publish(ORDER_UPDATED, orderUpdatedEvent);
     return updatedOrder;
   }
@@ -128,67 +143,6 @@ export class ConduitRelay implements Relay {
       takerTokenAddress,
       makerTokenAddress
     );
-  }
-
-  private async handleOrderFillMessage(fillMessage: ZeroExOrderFillEvent) {
-    // const { orderHash, filledMakerTokenAmount, filledTakerTokenAmount } = fillMessage;
-    // this.log(
-    //   'debug',
-    //   `Order ${orderHash} details:
-    //   FilledMakerAmount: ${filledMakerTokenAmount.toString()}
-    //   FilledTakerAmount: ${filledTakerTokenAmount.toString()}`
-    // );
-    // const existingOrder = await this.getFullOrder(orderHash);
-    // if (!existingOrder) {
-    //   this.log(
-    //     'debug',
-    //     `Order ${orderHash} from OrderFillMessage does not exist in our orderbook, skipping`
-    //   );
-    //   return;
-    // }
-    // this.log('info', `Updating order ${orderHash} in orderbook - got a fill event`);
-    // const takerTokenAmountRemaining = await this.getRemainingTakerAmount(
-    //   orderHash,
-    //   existingOrder.takerTokenAmount
-    // );
-    // this.log(
-    //   'debug',
-    //   `Order ${orderHash} has ${takerTokenAmountRemaining.toString()} remaining to fill`
-    // );
-    // this.updateRemainingTakerTokenAmountForOrderInDatabase(orderHash, filledTakerTokenAmount);
-    // this.log(
-    //   'info',
-    //   `Updated ${
-    //     orderHash
-    //   } in postgres database. Updated Taker Token Amount to ${takerTokenAmountRemaining.toString()}`
-    // );
-    // const updatedOrder: SignedOrderWithCurrentBalance = {
-    //   ...existingOrder,
-    //   takerTokenAmountRemaining,
-    // };
-    // const { baseToken, quoteToken } = await this.getBaseTokenAndQuoteTokenFromMakerAndTaker(
-    //   updatedOrder.takerTokenAddress,
-    //   updatedOrder.makerTokenAddress
-    // );
-    // try {
-    //   const channel = 'orderbook';
-    //   const type = 'fill';
-    //   const payload: OrderbookFill = {
-    //     ...serializeSignedOrder(updatedOrder),
-    //     takerTokenAmountRemaining: takerTokenAmountRemaining.toString(),
-    //     filledMakerTokenAmount: filledMakerTokenAmount.toString(),
-    //     filledTakerTokenAmount: filledTakerTokenAmount.toString(),
-    //   };
-    //   const channelHash = `${channel}.${type}:${baseToken}:${quoteToken}`;
-    //   const event: Message<OrderbookFill> = {
-    //     channel,
-    //     type,
-    //     payload,
-    //   };
-    //   // this.publishMessage(channelHash, event);
-    // } catch (err) {
-    //   this.log('error', 'Error publishing event to redis', err);
-    // }
   }
 
   private async getRemainingTakerAmount(

@@ -7,7 +7,7 @@ export interface Repository {
   getTokenPairs();
   getOrders(options?: OrderFilterOptions);
   getOrder(orderHash: string);
-  updateOrder(orderHash: string, orderState: OrderRelevantState);
+  updateOrder(orderHash: string, orderState: OrderRelevantState): Promise<SignedOrder>;
   getOrderbookForTokenPair(baseTokenAddress: string, quoteTokenAddress: string);
   addOrder(
     orderHash: string,
@@ -16,5 +16,8 @@ export interface Repository {
   ): Promise<SignedOrder>;
   addToken(token: Token): Promise<Token>;
   addTokenPair(baseTokenAddress, quoteTokenAddress);
-  getBaseTokenAndQuoteTokenFromMakerAndTaker(takerTokenAddress: string, makerTokenAddress: string);
+  getBaseTokenAndQuoteTokenFromMakerAndTaker(
+    takerTokenAddress: string,
+    makerTokenAddress: string
+  ): Promise<{ baseToken: string; quoteToken: string }>;
 }
