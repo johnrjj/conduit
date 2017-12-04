@@ -2,9 +2,11 @@ import { ZeroEx, SignedOrder, OrderState, OrderStateValid } from '0x.js';
 import { RedisClient } from 'redis';
 import { Relay } from '../client/types';
 import { Logger } from '../../util/logger';
-import { serializeSignedOrder } from '../../util/order';
+import { serializeSignedOrder, deserializeSignedOrder } from '../../util/order';
 import { Publisher } from '../publisher';
 import { Subscriber } from '../subscriber';
+import { ORDER_ADDED, OrderAdded, OrderEvent } from '../events';
+import { SerializedSignedOrder } from '../../types';
 
 export interface OrderWatcherConfig {
   zeroEx: ZeroEx;
@@ -21,13 +23,32 @@ export class OrderWatcher {
   private subscriber: Subscriber;
   private logger: Logger;
   private watchedOrders: Set<OrderHash> = new Set();
+
   constructor({ zeroEx, relay, publisher, subscriber, logger }: OrderWatcherConfig) {
     this.zeroEx = zeroEx;
     this.relay = relay;
     this.publisher = publisher;
     this.subscriber = subscriber;
     this.logger = logger;
-    this.setupOrderWatcher();
+
+    this.log('verbose', `OrderWatcher subscribing to ${ORDER_ADDED} message channel`);
+    this.subscriber.subscribe(ORDER_ADDED, this.handleOrderAddedEvent.bind(this));
+    this.log('verbose', `OrderWatcher subscribed to ${ORDER_ADDED} message channel`);
+
+    this.zeroEx.orderStateWatcher.subscribe(this.handleOrderStateUpdate.bind(this));
+    this.log('verbose', 'OrderWatcher initialized ZeroEx OrderStateWatcher subscription');
+  }
+
+  private async handleOrderAddedEvent(orderAddedEvent: OrderEvent<OrderAdded>) {
+    const { type, payload } = orderAddedEvent;
+    const signedOrder = deserializeSignedOrder(orderAddedEvent.payload.order as any);
+    const orderHash = ZeroEx.getOrderHashHex(orderAddedEvent.payload.order);
+    this.log(
+      'debug',
+      `OrderWatcher: New order added, adding to active watcher ${orderHash}`,
+      orderAddedEvent
+    );
+    this.watchOrder(signedOrder);
   }
 
   async watchOrderBatch(orders: Array<SignedOrder>) {
@@ -36,6 +57,7 @@ export class OrderWatcher {
 
   async watchOrder(order: SignedOrder) {
     const orderHash = ZeroEx.getOrderHashHex(order);
+    console.log(orderHash);
     if (this.watchedOrders.has(orderHash)) {
       return;
     }
@@ -43,50 +65,21 @@ export class OrderWatcher {
     return await this.zeroEx.orderStateWatcher.addOrder(order);
   }
 
-  private setupOrderWatcher() {
-    const orderStateWatcher = this.zeroEx.orderStateWatcher;
-    this.zeroEx.orderStateWatcher.subscribe(this.handleOrderStateUpdate);
-  }
-
+  // todo finish this logic...
   private handleOrderStateUpdate = async (orderState: OrderState) => {
-    this.log(
-      'debug',
-      `Received an order update for order hash ${orderState.orderHash}`,
-      orderState
-    );
     if (isOrderStateValid(orderState)) {
       const { orderHash, orderRelevantState } = orderState;
       this.log(
         'verbose',
-        `Order ${orderHash} update is in a valid state, updating order using relay conduit client`,
+        `Order ${orderHash} update (valid)
+        Remaining maker amount: ${orderRelevantState.remainingFillableMakerTokenAmount.toString()}
+        Remaining taker amount: ${orderRelevantState.remainingFillableTakerTokenAmount.toString()}`,
         orderRelevantState
       );
-      const updatedSignedOrder: SignedOrder = await this.relay.updateOrder(
-        orderHash,
-        orderRelevantState
-      );
-      this.log('verbose', `Order ${orderHash} updated in data store`);
-      const { makerTokenAddress, takerTokenAddress } = updatedSignedOrder;
-      const { baseToken, quoteToken } = await this.relay.getBaseTokenAndQuoteTokenFromMakerAndTaker(
-        makerTokenAddress,
-        takerTokenAddress
-      );
-      const serializedUpdatedSignedOrder = serializeSignedOrder(updatedSignedOrder);
-      const messageChannel = `orderbook:fill:${baseToken}:${quoteToken}`;
-      const messageContents = serializedUpdatedSignedOrder;
-      this.publisher.publish(messageChannel, messageContents);
-      this.log(
-        'verbose',
-        `Order ${orderHash} update complete, emiting event ${messageChannel}`,
-        messageContents
-      );
+      this.relay.updateOrder(orderHash, orderRelevantState);
       return;
     } else {
       const { orderHash, error } = orderState;
-      this.log(
-        'verbose',
-        `Order ${orderHash} update is in an invalid state. Not doing anythign right now`
-      );
       return;
     }
   };

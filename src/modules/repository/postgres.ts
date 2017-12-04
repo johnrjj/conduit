@@ -25,10 +25,7 @@ export interface PostgresRepositoryOptions {
   orderTableName: string;
   tokenTableName: string;
   tokenPairTableName: string;
-  zeroEx: ZeroEx;
   logger?: Logger;
-  redisSubscriber: RedisClient;
-  redisPublisher: RedisClient;
 }
 
 // TODO: TWO PHASE COMMITS w/ ROLLBACK STEP
@@ -120,11 +117,11 @@ export class PostgresRepository implements Repository {
   }
 
   async updateOrder(orderHash: string, orderState: OrderRelevantState): Promise<SignedOrder> {
-    // todo
-    // update order
-    // ....
-
-    // return updated signed order
+    const { remainingFillableTakerTokenAmount } = orderState;
+    this.updateRemainingTakerTokenAmountForOrderInDatabase(
+      orderHash,
+      remainingFillableTakerTokenAmount
+    );
     const signedOrder = await this.getOrder(orderHash);
     if (!signedOrder) {
       throw Error('Could not update, order does not exist');
@@ -139,14 +136,12 @@ export class PostgresRepository implements Repository {
       WHERE maker_token_address = ${baseTokenAddress}
         and taker_token_address = ${quoteTokenAddress}
     `);
-
     const asksQueryResPromise = this.pool.query(SQL`
       SELECT * 
       FROM orders
       WHERE maker_token_address = ${quoteTokenAddress}
         and taker_token_address = ${baseTokenAddress}
   `);
-
     try {
       const bidQueryRes = await bidsQueryResPromise;
       const asksQueryRes = await asksQueryResPromise;

@@ -1,4 +1,5 @@
 import { RedisClient } from 'redis';
+import { Logger } from '../../util/logger';
 
 export interface Subscriber {
   subscribe(channelName: string, payload: any): Promise<number>;
@@ -10,36 +11,19 @@ export class RedisSubscriber implements Subscriber {
   private subscriptionMap: { [subId: number]: [string, Function] };
   private subsRefsMap: { [trigger: string]: Array<number> };
   private currentSubscriptionId: number;
+  private logger?: Logger;
 
-  constructor({ redisSubscriber }: { redisSubscriber: RedisClient }) {
+  constructor({ redisSubscriber, logger }: { redisSubscriber: RedisClient; logger: Logger }) {
     this.subscriber = redisSubscriber;
+    this.logger = logger;
     this.subscriber.on('message', this.handleMessage.bind(this));
     this.subscriptionMap = {};
     this.subsRefsMap = {};
     this.currentSubscriptionId = 0;
   }
 
-  private handleMessage(channel: string, message: string) {
-    const subscribers = this.subsRefsMap[channel];
-
-    if (!subscribers || !subscribers.length) {
-      return;
-    }
-
-    let parsedMessage;
-    try {
-      parsedMessage = JSON.parse(message);
-    } catch (e) {
-      parsedMessage = message;
-    }
-
-    for (const subId of subscribers) {
-      const [, listener] = this.subscriptionMap[subId];
-      listener(parsedMessage);
-    }
-  }
-
   public subscribe(trigger: string, onMessage: (payload: any) => void): Promise<number> {
+    this.log('debug', `Received a redis subscription request for ${trigger}. Subscribing...`);
     const triggerName: string = trigger;
     const id = this.currentSubscriptionId++;
     this.subscriptionMap[id] = [triggerName, onMessage];
@@ -66,7 +50,12 @@ export class RedisSubscriber implements Subscriber {
 
   public unsubscribe(subId: number): void {
     const [triggerName = null] = this.subscriptionMap[subId] || [];
-
+    this.log(
+      'debug',
+      `Received a redis unsubscribe request for triggerName: ${triggerName} subId: ${
+        subId
+      }. Unsubscribing...`
+    );
     if (!triggerName) {
       throw new Error(`There is no subscription of id "${subId}"`);
     }
@@ -83,5 +72,32 @@ export class RedisSubscriber implements Subscriber {
       this.subsRefsMap[triggerName] = newRefs;
     }
     delete this.subscriptionMap[subId];
+  }
+
+  private handleMessage(channel: string, message: string) {
+    const subscribers = this.subsRefsMap[channel];
+
+    if (!subscribers || !subscribers.length) {
+      return;
+    }
+
+    let parsedMessage;
+    try {
+      parsedMessage = JSON.parse(message);
+    } catch (e) {
+      parsedMessage = message;
+    }
+
+    for (const subId of subscribers) {
+      const [, listener] = this.subscriptionMap[subId];
+      listener(parsedMessage);
+    }
+  }
+
+  private log(level: string, message: string, meta?: any) {
+    if (!this.logger) {
+      return;
+    }
+    this.logger.log(level, message, meta);
   }
 }
