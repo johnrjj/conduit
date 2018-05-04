@@ -19,7 +19,7 @@ To start the local dev server:
 
 ```
 yarn install
-yarn start
+yarn dev
 ```
 The server is hosted at `http://localhost:3000`
 
